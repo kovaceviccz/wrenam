@@ -24,7 +24,7 @@ import {
     getByUserIdAndRealm,
     invalidateByHandles
 } from "org/forgerock/openam/ui/admin/services/realm/SessionsService";
-import { getByIdStartsWith } from "org/forgerock/openam/ui/admin/services/realm/UsersService";
+import { getByIdStartsWith } from "org/forgerock/openam/ui/admin/services/realm/identities/UsersService";
 import AsyncSingleSelect from "components/inputs/select/AsyncSingleSelect";
 import CallToAction from "components/CallToAction";
 import PageDescription from "components/PageDescription";

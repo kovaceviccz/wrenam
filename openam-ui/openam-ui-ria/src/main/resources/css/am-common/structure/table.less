@@ -1,3 +1,18 @@
+/*
+ * The contents of this file are subject to the terms of the Common Development and
+ * Distribution License (the License). You may not use this file except in compliance with the
+ * License.
+ *
+ * You can obtain a copy of the License at legal/CDDLv1.0.txt. See the License for the
+ * specific language governing permission and limitations under the License.
+ *
+ * When distributing Covered Software, include this CDDL Header Notice in each file and include
+ * the License file at legal/CDDLv1.0.txt. If applicable, add the following below the CDDL
+ * Header, with the fields enclosed by brackets [] replaced by your own identifying
+ * information: "Portions copyright [year] [name of copyright owner]".
+ *
+ * Copyright 2015-2022 ForgeRock AS.
+ */
 .table-container {
     /* Prevents tables from overflowing when the container is too thin. This can and does happen. */
     overflow: auto;
@@ -11,6 +26,7 @@
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
+        outline: 0;
 
         &.select-all-header-cell,
         &.select-row-cell {
@@ -29,18 +45,18 @@
         }
 
         &.fr-col-btn-1 {
-            width: 39px;
-            min-width: 39px;
+            width: 48px;
+            min-width: 48px;
         }
 
         &.fr-col-btn-2 {
-            width: 65px;
-            min-width: 65px;
+            width: 73px;
+            min-width: 73px;
         }
 
         &.fr-col-btn-3 {
-            width: 88px;
-            min-width: 88px;
+            width: 95px;
+            min-width: 95px;
         }
     }
 
@@ -85,6 +101,15 @@
     &.table-hover > tbody > tr {
         cursor: pointer;
     }
+
+    /* Reapplying the default bootstrap styles after we've previously overwritten them */
+    &.table-condensed {
+        > tbody > tr > td,
+        > thead > tr > th,
+        > tfoot > tr > td {
+            padding: 5px;
+        }
+    }
 }
 
 .am-inline-edit-table {
@@ -111,4 +136,13 @@
             }
         }
     }
+}
+
+.react-bootstrap-table th[data-row-selection] {
+    width: 50px;
+}
+
+.react-bootstrap-table-pagination {
+    float: right;
+    margin: 0 0 10px 0;
 }
