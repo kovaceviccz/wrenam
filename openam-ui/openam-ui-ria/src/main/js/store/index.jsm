@@ -12,12 +12,18 @@
  * information: "Portions copyright [year] [name of copyright owner]".
  *
  * Copyright 2016 ForgeRock AS.
+ * Portions copyright 2025 Wren Security.
  */
 
-import { createStore, compose } from "redux";
+import { createStore, compose, combineReducers } from "redux";
 
-import rootReducer from "./reducers/index";
+import reducers from "./reducers/index";
+import modules from "./modules/index";
 
+const rootReducer = combineReducers({
+    ...reducers,
+    ...modules
+});
 const defaultState = {};
 const enhancers = compose(window.devToolsExtension ? window.devToolsExtension() : (f) => f);
 

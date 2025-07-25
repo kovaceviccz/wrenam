@@ -11,8 +11,8 @@
  * Header, with the fields enclosed by brackets [] replaced by your own identifying
  * information: "Portions copyright [year] [name of copyright owner]".
  *
- * Copyright 2016 ForgeRock AS.
- * Portions copyright 2024 Wren Security.
+ * Copyright 2016-2018 ForgeRock AS.
+ * Portions copyright 2024-2025 Wren Security.
  */
 
 /**
@@ -42,19 +42,14 @@
 define([
     "i18next",
     "lodash",
+    "components/form/schema/isObjectType",
     "org/forgerock/openam/ui/common/models/schemaTransforms/transformBooleanTypeToCheckboxFormat",
     "org/forgerock/openam/ui/common/models/schemaTransforms/transformEnumTypeToString",
     "org/forgerock/openam/ui/common/models/schemaTransforms/warnOnInferredPasswordWithoutFormat"
-], (i18next, _, transformBooleanTypeToCheckboxFormat, transformEnumTypeToString,
+], (i18next, _, isObjectType,
+        transformBooleanTypeToCheckboxFormat,
+        transformEnumTypeToString,
         warnOnInferredPasswordWithoutFormat) => {
-    /**
-     * Determines whether the specified object is of type <code>object</code>
-     * @param   {Object}  object Object to determine the type of
-     * @returns {Boolean}        Whether the object is of type <code>object</code>
-     */
-    function isObjectType (object) {
-        return object.type === "object";
-    }
 
     function groupTopLevelSimpleProperties (raw) {
         const collectionProperties = _(raw.properties)
@@ -91,12 +86,12 @@ define([
     }
 
     /**
-    * Ungroups collection properties, moving them one level up.
-    *
-    * @param   {Object} raw Schema
-    * @param   {string} groupKey Group key of the property value object
-    * @returns {JSONSchema} JSONSchema new JSONSchema object
-    */
+     * Ungroups collection properties, moving them one level up.
+     *
+     * @param   {Object} raw Schema
+     * @param   {string} groupKey Group key of the property value object
+     * @returns {JSONSchema} JSONSchema new JSONSchema object
+     */
     function ungroupCollectionProperties (raw, groupKey) {
         const collectionProperties = _.pickBy(raw.properties[groupKey].properties, (value) => {
             return value.type === "object" && _.has(value, "properties");
@@ -124,13 +119,13 @@ define([
      * @param {Array} callbacks Array of functions
      */
     function eachProperty (object, callbacks) {
-        if (isObjectType(object)) {
+        if (isObjectType.default(object)) {
             _.forEach(object.properties, (property, key) => {
                 _.forEach(callbacks, (callback) => {
                     callback(property, key);
                 });
 
-                if (isObjectType(property)) {
+                if (isObjectType.default(property)) {
                     eachProperty(property, callbacks);
                 }
             });
@@ -138,14 +133,16 @@ define([
     }
 
     /**
-     * Iterates over a scheam, transforming adding appropriate warnings.
+     * Iterates over a schema, transforming and adding appropriate warnings.
      * @param {Object} schema the schema to be transformed
      * @returns {Object} the transformed schema
      */
     function cleanJSONSchema (schema) {
-        eachProperty(schema, [transformBooleanTypeToCheckboxFormat,
+        eachProperty(schema, [
+            transformBooleanTypeToCheckboxFormat,
             transformEnumTypeToString,
-            warnOnInferredPasswordWithoutFormat]);
+            warnOnInferredPasswordWithoutFormat
+        ]);
 
         return schema;
     }
@@ -169,26 +166,74 @@ define([
 
             this.raw = Object.freeze(schema);
         }
+
         addDefaultProperties (keys) {
             const schema = _.cloneDeep(this.raw);
-            schema.defaultProperties = keys;
+            schema.defaultProperties = _.union(schema.defaultProperties, keys);
             return new JSONSchema(schema);
         }
-        hasDefaultProperties () {
-            return !_.isUndefined(this.raw.defaultProperties);
+
+        removeUnrequiredProperties () {
+            return this.omit((property) => property.required === false);
         }
+
+        /**
+         * Returns a new JSONSchema with only the required and default properties present.
+         * Mirrors ESM removeUnrequiredNonDefaultProperties.
+         * @returns {JSONSchema} JSONSchema Schema with only the required and default properties present
+         */
+        removeUnrequiredNonDefaultProperties () {
+            const schema = _.cloneDeep(this.raw);
+            const defaultProps = this.raw.defaultProperties;
+            schema.properties = _.pickBy(this.raw.properties, (property, key) => {
+                const required = this.hasInheritance(property)
+                    ? _.get(property, "properties.value.required")
+                    : property.required;
+                return _.includes(defaultProps, key) || required;
+            });
+            return new JSONSchema(schema);
+        }
+
+        hasDefaultProperties () {
+            return !_.isEmpty(this.raw.defaultProperties);
+        }
+
         getEnableKey () {
             const key = `${_.camelCase(this.raw.title)}Enabled`;
             if (this.raw.properties[key]) {
                 return key;
             }
         }
+
+        hasEnableProperty () {
+            return !_.isUndefined(this.raw.properties[`${_.camelCase(this.raw.title)}Enabled`]);
+        }
+
+        /**
+         * Dual-mode inheritance check:
+         *   • called with <property> → per-property test (new ESM behaviour)
+         *   • called without args     → original “all props” container test
+         * @param {Object} [property] Specific property to check for inheritance; if omitted, checks all properties.
+         * @returns {Boolean} Whether inheritance is present within property.
+         */
+        hasInheritance (property) {
+            if (typeof property !== "undefined") {
+                return !_.isEmpty(property) &&
+                    property.type === "object" &&
+                    _.has(property, "properties.inherited");
+            }
+
+            // Legacy behaviour (no argument)
+            return !_.isEmpty(this.raw.properties) && _.every(this.raw.properties, (prop) =>
+                prop.type === "object" && _.has(prop, "properties.inherited"));
+        }
+
         getEnableProperty () {
             return this.pick(this.getEnableKey());
         }
+
         getKeys (sort) {
-            // eslint-disable-next-line no-negated-condition
-            sort = typeof sort !== "undefined" ? sort : false;
+            sort = typeof sort === "undefined" ? false : sort;
 
             if (sort) {
                 const sortedSchemas = _.sortBy(_.map(this.raw.properties), "propertyOrder");
@@ -197,35 +242,49 @@ define([
                 return _.keys(this.raw.properties);
             }
         }
+
         getPasswordKeys () {
-            const passwordProperties = _.pickBy(this.raw.properties, _.matches({ format: "password" }));
+            const passwordProperties = _.pickBy(this.raw.properties, (property) => {
+                const path = this.hasInheritance(property)
+                    ? "properties.value.format"
+                    : "format";
+                return _.get(property, path) === "password";
+            });
 
             return _.keys(passwordProperties);
         }
+
         getPropertiesAsSchemas () {
             return _.mapValues(this.raw.properties, (property) => new JSONSchema(property));
         }
+
         getRequiredPropertyKeys () {
-            return _.keys(_.pickBy(this.raw.properties, _.matches({ required: true })));
+            const requiredProperties = _.pickBy(this.raw.properties, (property) => {
+                const path = this.hasInheritance(property)
+                    ? "properties.value.required"
+                    : "required";
+                return _.get(property, path) === true;
+            });
+
+            return _.keys(requiredProperties);
         }
-        hasEnableProperty () {
-            return !_.isUndefined(this.raw.properties[`${_.camelCase(this.raw.title)}Enabled`]);
-        }
-        hasInheritance () {
-            return !_.isEmpty(this.raw.properties) && _.every(this.raw.properties, (property) =>
-                property.type === "object" && _.has(property, "properties.inherited"));
-        }
+
         /**
          * Whether this schema objects' properties are all schemas in their own right.
          * If true, this object is a simply a container for other schemas.
          * @returns {Boolean} Whether this object is a collection
          */
         isCollection () {
-            return _.every(this.raw.properties, (property) => property.type === "object");
+            if (this.raw.properties) {
+                return _.every(this.raw.properties, (property) => property.type === "object");
+            }
+            return false;
         }
+
         isEmpty () {
             return _.isEmpty(this.raw.properties);
         }
+
         pick (predicate) {
             const schema = _.cloneDeep(this.raw);
             schema.properties = typeof predicate === "function"
@@ -234,20 +293,16 @@ define([
 
             return new JSONSchema(schema);
         }
+
         omit (predicate) {
             const schema = _.cloneDeep(this.raw);
             schema.properties = typeof predicate === "function"
                 ? _.omitBy(this.raw.properties, predicate)
                 : _.omit(this.raw.properties, predicate);
+
             return new JSONSchema(schema);
         }
-        /**
-         * Returns a new JSONSchema with all non-required properties removed.
-         * @returns {JSONSchema} JSONSchema object with non-required properties removed.
-         */
-        removeUnrequiredProperties () {
-            return this.omit((property) => property.required === false);
-        }
+
         /**
          * Flattens schema properties to enable schema to be renderable. Adds inheritance metadata to each property of
          * the schema, so JSONEditor knows whether to enable or disable the input field.
@@ -256,14 +311,19 @@ define([
          */
         toFlatWithInheritanceMeta (values) {
             const schema = _.cloneDeep(this.raw);
-            schema.properties = _.mapValues(this.raw.properties, (originalValue, propName) => {
-                const property = originalValue.properties.value;
-                property.title = originalValue.title;
-                property.description = originalValue.description;
 
-                const valueIsInherited = Boolean(values.raw[propName] && values.raw[propName].inherited);
-                property.isInherited = valueIsInherited;
-                return property;
+            schema.properties = _.mapValues(this.raw.properties, (originalValue, propName) => {
+                if (this.hasInheritance(originalValue)) {
+                    const value = originalValue.properties.value;
+                    const property = {
+                        ..._.omit(originalValue, "properties"),
+                        ...value,
+                        isInherited: Boolean(values.raw[propName] && values.raw[propName].inherited)
+                    };
+                    return property;
+                }
+
+                return originalValue;
             });
 
             return new JSONSchema(schema);
