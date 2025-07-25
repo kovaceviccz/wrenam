@@ -11,7 +11,8 @@
  * Header, with the fields enclosed by brackets [] replaced by your own identifying
  * information: "Portions copyright [year] [name of copyright owner]".
  *
- * Copyright 2016 ForgeRock AS.
+ * Copyright 2016-2018 ForgeRock AS.
+ * Portions copyright 2025 Wren Security.
  */
 
 define([
@@ -24,28 +25,86 @@ define([
     "org/forgerock/openam/ui/admin/utils/JSONEditorTheme",
     "org/forgerock/commons/ui/common/util/UIUtils",
 
-    "popoverclickaway", // depends on jquery and bootstrap
-    "selectize" // jquery dependencies
-], ($, _, Backbone, JSONEditor, JSONSchema, JSONValues, JSONEditorTheme, UIUtils) => {
+    "selectize", // jquery dependencies
+    "popoverclickaway" // depends on jquery and bootstrap
+], ($, _, Backbone, JSONEditor, JSONSchema, JSONValues, JSONEditorTheme, UIUtils, Selectize) => {
+    /**
+     * The "allowEmptyOption" setting on selectize defaults to false to accomodate the common <select> practice of
+     * having the first empty option to act as a placeholder. The following enum plugin checks for the presence of this
+     * empty option and applies the functionality accordingly. If an empty option is present, then the "dropdown_header"
+     * plugin will be applied, with the display name of the enum title. Otherwise if no empty option is present, the
+     * backspace will be disabled stopping invalid empty values being set on the enum.
+     */
+    Selectize.define("enum_plugin", function (options) {
+        const schema = options.schema;
+        const emptyOptionIndex = _.indexOf(schema.enum, "");
+        const hasEmptyOption = emptyOptionIndex > -1;
+
+        const noBackspacePlugin = () => {
+            const notBackspace = (event) => !event || event.keyCode !== 8;
+            this.deleteSelection = (() => {
+                const original = this.deleteSelection;
+                return (event) => {
+                    if (notBackspace(event)) {
+                        return original.apply(this, arguments);
+                    }
+                    return false;
+                };
+            })();
+        };
+
+        const dropdownHeaderPlugin = () => {
+            this.plugins.settings["dropdown_header"] = {
+                title: schema.options.enum_titles[emptyOptionIndex]
+            };
+            this.require("dropdown_header");
+            this.setup = (() => {
+                const original = this.setup;
+                return () => {
+                    original.apply(this, arguments);
+                    this.$dropdown.on("mousedown", ".selectize-dropdown-header", () => {
+                        this.setValue("");
+                        this.close();
+                        this.blur();
+                        return false;
+                    });
+                };
+            })();
+        };
+
+        if (hasEmptyOption) {
+            dropdownHeaderPlugin();
+        } else {
+            noBackspacePlugin();
+        }
+    });
+
     function convertHelpBlocksToPopOvers (element) {
         const template = "templates/common/jsonSchema/editors/_HelpPopover.html";
         UIUtils.compileTemplate(template).then((html) => {
-            $(element).find(".help-block").addClass("hidden-lg hidden-md hidden-sm").each((index, value) => {
-                const helpPopOver = $(html);
-
-                helpPopOver.popoverclickaway({
-                    container: "#content",
-                    html: true,
-                    placement: "auto top",
-                    content: value.innerHTML
-                }).click((event) => {
-                    event.preventDefault();
+            $(element).find(".help-block:not(.errormsg)")
+                .addClass("hidden-lg hidden-md hidden-sm")
+                .each((index, value) => {
+                    const $el = $(value);
+                    // Skip if the next sibling is already our popover
+                    if ($el.next(".help-popover").length) {
+                        return;
+                    }
+                    const helpPopOver = $(html).addClass("help-popover");
+                    helpPopOver.popoverclickaway({
+                        container: "#content",
+                        html: true,
+                        placement: "auto top",
+                        content: value.innerHTML
+                    }).click((event) => {
+                        event.preventDefault();
+                    });
+                    // Insert immediately after the help block so the check works on subsequent calls
+                    $el.after(helpPopOver);
                 });
-
-                $(value).parent().append(helpPopOver);
-            });
         });
     }
+
     /**
      * Passwords are not delivered to the UI from the server. Thus we set a placeholder informing the user that
      * the password will remain unchanged if they do nothing.
@@ -55,24 +114,18 @@ define([
         $(element).find("input:password").attr("placeholder", $.t("common.form.passwordPlaceholder"));
     }
 
-    function applyJSONEditorToElement (element, schema, values) {
+    function applyJSONEditorToElement (element, options) {
+        const { schema, values, hideInheritance = false } = options;
         const GRID_COLUMN_WIDTH_1 = 6;
         const GRID_COLUMN_WIDTH_2 = 4;
 
         JSONEditor.plugins.selectize.enable = true;
+        JSONEditor.plugins.selectize.plugins = (schema) => [{ name: "enum_plugin", options: { schema } }];
         JSONEditor.defaults.themes.openam = JSONEditorTheme.getTheme(GRID_COLUMN_WIDTH_1, GRID_COLUMN_WIDTH_2);
 
-        const hasInheritance = schema.hasInheritance();
-        let actualSchema;
-        let actualValues;
+        let actualSchema = schema.toFlatWithInheritanceMeta(values);
+        let actualValues = values.removeInheritance();
 
-        if (hasInheritance) {
-            actualSchema = schema.toFlatWithInheritanceMeta(values);
-            actualValues = values.removeInheritance();
-        } else {
-            actualSchema = schema;
-            actualValues = values;
-        }
         actualSchema = actualSchema.raw;
         actualValues = actualValues.raw;
 
@@ -80,6 +133,7 @@ define([
             "disable_collapse": true,
             "disable_edit_json": true,
             "disable_properties": true,
+            "hide_inheritance": hideInheritance,
             "iconlib": "fontawesome4",
             "schema": actualSchema,
             "theme": "openam"
@@ -108,19 +162,25 @@ define([
             });
         },
         toggleInheritance (propertySchemaPath, propValue, isInherited) {
-            this.options.values = this.options.values.addValueForKey(propertySchemaPath, "inherited", isInherited);
-            this.options.values = this.options.values.addValueForKey(propertySchemaPath, "value", propValue);
+            // update the data to hold whatever is now on UI before doing further manipulations
+            this.options.values = this.options.values.extend(this.getData());
+
+            this.options.values = this.options.values.addValueForPath([propertySchemaPath, "inherited"], isInherited);
+            this.options.values = this.options.values.addValueForPath([propertySchemaPath, "value"], propValue);
 
             this.render();
         },
         render () {
             this.$el.empty();
 
+            const watchlist = _.get(this.jsonEditor, "watchlist");
+
             this.jsonEditor = applyJSONEditorToElement(
                 this.$el,
-                this.options.schema,
-                this.options.values
+                this.options
             );
+
+            this.jsonEditor.watchlist = watchlist;
 
             if (!this.options.displayTitle) {
                 this.$el.find("[data-header]").parent().hide();
@@ -131,8 +191,11 @@ define([
         isValid () {
             return this.jsonEditor.validate().length === 0;
         },
+        /**
+         * Returns form data.
+         * @returns {Object} form data
+         */
         getData () {
-            const passwordKeys = this.options.schema.getPasswordKeys();
             let values = new JSONValues(this.jsonEditor.getValue());
 
             // Returns only the subset of values that were displayed to the user (via defaultProperties)
@@ -140,21 +203,26 @@ define([
                 values = values.pick(this.options.schema.raw.defaultProperties);
             }
 
-            let valuesWithoutEmptyPasswords = values.omit((value, key) => {
-                if (passwordKeys.indexOf(key) !== -1 && _.isEmpty(value)) {
-                    return true;
-                }
-            });
+            values = values.nullifyEmptyPasswords(this.options.schema.getPasswordKeys());
+            values = values.addInheritance(this.options.values.raw);
 
-            if (this.options.schema.hasInheritance()) {
-                valuesWithoutEmptyPasswords = valuesWithoutEmptyPasswords.addInheritance(this.options.values.raw);
-            }
-
-            this.options.values = valuesWithoutEmptyPasswords;
-            return valuesWithoutEmptyPasswords.raw;
+            return values.raw;
         },
         setData (data) {
             this.options.values = this.options.values.extend(data);
+        },
+        watch (path, callback) {
+            this.jsonEditor.watch(path, callback);
+        },
+        destroy () {
+            // unwatch all properties before destroy
+            const watchlistKeys = _.keys(this.jsonEditor.watchlist);
+            _.forEach(watchlistKeys, (watchlistKey) => {
+                this.jsonEditor.unwatch(watchlistKey);
+            });
+
+            this.jsonEditor.destroy();
+            this.jsonEditor = null;
         }
     });
 

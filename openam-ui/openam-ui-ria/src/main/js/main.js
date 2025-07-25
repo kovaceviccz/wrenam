@@ -66,6 +66,8 @@ require.config({
         "prop-types"       : "libs/prop-types",
         "qrcode"           : "libs/qrcode",
         "react-bootstrap"  : "libs/react-bootstrap",
+        "react-bootstrap-table-next"        : "libs/react-bootstrap-table-next",
+        "react-bootstrap-table2-paginator"  : "libs/react-bootstrap-table2-paginator",
         "react-dom"        : "libs/react-dom",
         "react"            : "libs/react",
         "react-input-autosize": "libs/react-input-autosize",

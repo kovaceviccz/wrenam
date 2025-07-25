@@ -33,6 +33,7 @@
             "i18next": "/base/target/ui-compose/libs/i18next",
             "underscore" : "/base/target/ui-compose/libs/underscore",
             "redux": "/base/target/www/libs/redux",
+            "redux-actions": "/base/target/www/libs/redux-actions",
             "chai": "/base/node_modules/chai/chai",
             "sinon-chai": "/base/node_modules/sinon-chai/lib/sinon-chai",
             "sinon": "/base/target/test/libs/sinon",

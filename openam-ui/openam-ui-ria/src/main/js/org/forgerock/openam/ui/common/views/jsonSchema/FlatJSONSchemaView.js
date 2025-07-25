@@ -11,7 +11,8 @@
  * Header, with the fields enclosed by brackets [] replaced by your own identifying
  * information: "Portions copyright [year] [name of copyright owner]".
  *
- * Copyright 2016-2017 ForgeRock AS.
+ * Copyright 2016-2020 ForgeRock AS.
+ * Portions copyright 2024-2025 Wren Security.
  */
 
 /**
@@ -56,29 +57,34 @@ define([
             if (!(options.schema instanceof JSONSchema)) {
                 throw new TypeError("[FlatJSONSchemaView] \"schema\" argument is not an instance of JSONSchema.");
             }
-            if (options.schema.isCollection() && !options.schema.hasInheritance()) {
-                throw new Error(
-                    "[FlatJSONSchemaView] JSONSchema collections with no inheritance are not supported by this view.");
-            }
             if (!(options.values instanceof JSONValues)) {
                 throw new TypeError("[FlatJSONSchemaView] \"values\" argument is not an instance of JSONValues.");
             }
 
             this.options = _.defaults(options, {
-                showOnlyRequiredAndEmpty: false
+                showOnlyRequiredAndEmpty: false,
+                showOnlyRequired: false
             });
         },
         render () {
             let schema = this.options.schema;
+            let displayForm = true;
 
             if (this.options.showOnlyRequiredAndEmpty) {
                 const requiredSchemaKeys = this.options.schema.getRequiredPropertyKeys();
-                const emptyValueKeys = this.options.values.getEmptyValueKeys();
+                const emptyValueKeys = this.options.values.getEmptyValueKeys(schema);
                 const requiredAndEmptyKeys = _.intersection(requiredSchemaKeys, emptyValueKeys);
-                schema = schema.removeUnrequiredProperties().addDefaultProperties(requiredAndEmptyKeys);
+                schema = schema.removeUnrequiredNonDefaultProperties().addDefaultProperties(requiredAndEmptyKeys);
+                displayForm = !_.isEmpty(requiredAndEmptyKeys);
+            } else if (this.options.showOnlyRequired) {
+                const requiredSchemaKeys = this.options.schema.getRequiredPropertyKeys();
+                schema = schema.removeUnrequiredNonDefaultProperties().addDefaultProperties(requiredSchemaKeys);
+                displayForm = !_.isEmpty(requiredSchemaKeys);
             }
 
             this.subview = new JSONEditorView({
+                displayForm,
+                hideInheritance: this.options.hideInheritance,
                 displayTitle: false,
                 el: this.$el,
                 schema,
@@ -92,14 +98,27 @@ define([
         isValid () {
             return !this.subview || this.subview.isValid();
         },
-        getData () {
+        getData (...args) {
             if (this.subview) {
-                return this.subview.getData();
+                return this.subview.getData(...args);
             }
         },
         setData (data) {
             if (this.subview) {
+                // Update our local copy of values so a later invocation of #render will render the values that were last set
+                this.options.values = this.options.values.extend(data);
                 return this.subview.setData(data);
+            }
+        },
+        watch (path, callback) {
+            if (this.subview) {
+                this.subview.watch(path, callback);
+            }
+        },
+        destroy () {
+            if (this.subview) {
+                this.subview.destroy();
+                this.subview = null;
             }
         }
     });

@@ -12,9 +12,8 @@
 * information: "Portions copyright [year] [name of copyright owner]".
 *
 * Copyright 2015-2016 ForgeRock AS.
-* Portions copyright 2024 Wren Security.
+* Portions copyright 2024-2025 Wren Security.
 */
-
 
 .block {
     padding-bottom: 40px;
@@ -45,15 +44,18 @@ h3.block-header {
     }
 }
 
-.fr-panel-tab{
+.fr-panel-tab {
     .btn-toolbar {
         margin-top: 0;
     }
-    .btn-action-group {
-        margin-left: -2px;
-    }
 }
 
+.am-btn-action-group {
+    margin: 0 -2px;
+    > .btn {
+        margin: 0 2px;
+    }
+}
 
 .form-horizontal .form-group {
     [class*="col-"] + .help-block + .info-button {
@@ -68,13 +70,13 @@ h3.block-header {
     box-shadow: none;
     color:@base-theme-color;
 
-    &:hover{
+    &:hover {
         background-color:transparent;
         border-color:transparent;
         color: darken(@base-theme-color, 5%);
     }
 
-    &:focus{
+    &:focus {
         outline:none;
         box-shadow:none;
         color: darken(@base-theme-color, 5%);
@@ -97,7 +99,7 @@ div[data-schemaid=root] {
     }
 }
 
-.jsoneditor-block{
+.jsoneditor-block {
     &:first-of-type {
         margin-top: 5px;
     }
@@ -114,7 +116,6 @@ div[data-schemaid=root] {
         position: absolute;
     }
 }
-
 
 .btn-toolbar.page-toolbar {
     border-top: 1px solid #ddd;
@@ -160,7 +161,6 @@ div[data-schemaid=root] {
     margin-top: 8px;
  }
 
-
 #commonTasksBtn {
     cursor:pointer;
     color: @base-theme-color;
@@ -168,7 +168,6 @@ div[data-schemaid=root] {
         color: darken(@base-theme-color, 5%);
     }
 }
-
 
 // Popovers
 a[data-toggle="popover"] {
@@ -180,6 +179,7 @@ a[data-toggle="popover"] {
         color: darken(@base-theme-color,5%);
     }
 }
+
 .popover {
     max-width: 500px;
     .popover-title {
@@ -189,7 +189,6 @@ a[data-toggle="popover"] {
         font-weight: normal;
     }
 }
-
 
 .call-to-action-block {
 
@@ -209,6 +208,115 @@ a[data-toggle="popover"] {
 .am-btn-single-icon {
     width: 34px;
     height: 34px;
+}
+
+.panel-heading {
+    .media {
+        color: @base-theme-color;
+
+        &.editable:hover {
+            cursor: pointer;
+            color: darken(@base-theme-color, 5%);
+        }
+
+        h4.media-heading {
+            letter-spacing: normal;
+            font-size: 16px;
+            line-height: 28px;
+            margin: 0;
+        }
+
+        .media-left {
+            >div {
+                .icon-circle(28px);
+            }
+        }
+
+        .media-right {
+            .fa {
+                color: #777;
+                font-size: 14px;
+            }
+        }
+    }
+}
+
+.am-table-icon-cell {
+    display: inline;
+    .am-table-icon-cell-stack {
+        margin: -5px 5px 0 0;
+    }
+
+    &.am-table-icon-cell-editable {
+        &:hover, &:focus {
+            color: @base-theme-color;
+        }
+    }
+}
+
+.am-badge-group {
+    .badge:not(:last-of-type) {
+        margin-right: 5px;
+    }
+}
+
+.am-masonry-item {
+    display: inline-block;
+}
+
+.am-summary-section {
+    pre.am-text-preformatted {
+        background-color: transparent;
+        border: none;
+        margin: 0;
+        padding: 0;
+    }
+
+    .am-summary-sub-section {
+        &:first-of-type {
+            margin-top: -15px;
+        }
+
+        &:not(:first-of-type) {
+            border-top: 1px solid #ddd;
+        }
+
+        &:last-of-type {
+            margin-bottom: -15px;
+        }
+
+        padding: 15px;
+
+        h5 {
+            font-weight: normal;
+            margin: 0 0 5px;
+        }
+    }
+}
+
+.form-group {
+    margin-bottom: 30px;
+}
+
+.form-horizontal .form-group {
+    margin-bottom: 15px;
+}
+
+.am-search-field-with-reset {
+    .fa-search {
+        position: absolute;
+        left: 0;
+        z-index: 10;
+        padding: 10px;
+    }
+
+    .input-group-btn .btn-default {
+        border-color: #ccc;
+    }
+
+    input.form-control {
+        padding-left: 29px;
+    }
 }
 
 @media (min-width: 992px) {

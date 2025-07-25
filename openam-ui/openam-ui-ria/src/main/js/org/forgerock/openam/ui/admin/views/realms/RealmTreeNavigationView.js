@@ -12,7 +12,7 @@
  * information: "Portions copyright [year] [name of copyright owner]".
  *
  * Copyright 2015-2016 ForgeRock AS.
- * Portions copyright 2024 Wren Security.
+ * Portions copyright 2024-2025 Wren Security.
  */
 
 define([
@@ -99,6 +99,10 @@ define([
             icon: "fa-angle-right",
             route: "realmsResourceTypes"
         }]
+    }, {
+        title: "console.common.navigation.identities",
+        icon: "fa-address-card",
+        route: "realmsIdentities"
     }, {
         title: "console.common.navigation.subjects",
         icon: "fa-users",
