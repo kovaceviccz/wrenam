@@ -134,6 +134,11 @@ public class CoreRestRouteProvider extends AbstractRestRouteProvider {
                 .authorizeWith(ResourceOwnerOrSuperUserAuthzModule.class)
                 .toAnnotatedCollection(PushDevicesResource.class);
 
+        realmRouter.route("users/{user}/groups")
+                .auditAs(GROUPS)
+                .authorizeWith(CrestPrivilegeAuthzModule.class)
+                .toAnnotatedCollection(UserGroupsResource.class);
+
         realmRouter.route("sessions")
                 .authenticateWith(ssoToken().exceptActions("validate"))
                 .auditAs(SESSION)

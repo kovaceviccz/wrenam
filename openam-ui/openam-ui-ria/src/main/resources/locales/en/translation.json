@@ -950,8 +950,57 @@
             }
         },
         "identities": {
-            "tabs": ["Groups"],
+            "tabs": ["Identities", "Groups"],
             "title": "Identities",
+            "users": {
+                "confirmDeleteSelected": "Are you sure you want to delete the selected identity?",
+                "confirmDeleteSelected_plural": "Are you sure you want to delete the selected identities?",
+                "edit": {
+                    "tabs": ["General", "Services", "Groups"],
+                    "type": "Identity",
+                    "services": {
+                        "confirmDeleteSelected": "Are you sure you want to delete the selected service?",
+                        "confirmDeleteSelected_plural": "Are you sure you want to delete the selected services?",
+                        "edit": {
+                            "subtitle": "Edit __type__ service"
+                        },
+                        "list": {
+                            "grid": [
+                                "Name"
+                            ],
+                            "callToAction": {
+                                "title": "No services configured.",
+                                "description": "Configure services for this user.",
+                                "button": "Add Service"
+                            }
+                        },
+                        "new": {
+                            "subtitle": "New __type__ service"
+                        }
+                    }
+                },
+                "new": {
+                    "title": "New Identity",
+                    "userId": "User ID",
+                    "emailAddress" : "Email address"
+                },
+                "list": {
+                    "grid": [
+                        "Username",
+                        "First name",
+                        "Last name",
+                        "Email address",
+                        "Status"
+                    ],
+                    "callToAction": {
+                        "title": "No identities configured.",
+                        "description": "Configure Identities to represent the subjects authenticating to the AM server.",
+                        "button": "Add Identity"
+                    },
+                    "noSuchUser": "No such user found",
+                    "search": "Search Identities..."
+                }
+            },
             "groups": {
                 "confirmDeleteSelected": "Are you sure you want to delete the selected identity group?",
                 "confirmDeleteSelected_plural": "Are you sure you want to delete the selected identity groups?",

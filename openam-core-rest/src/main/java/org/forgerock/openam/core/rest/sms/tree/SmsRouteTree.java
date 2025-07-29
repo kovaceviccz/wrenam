@@ -57,6 +57,7 @@ import java.util.Set;
 import org.forgerock.api.models.Action;
 import org.forgerock.api.models.ApiDescription;
 import org.forgerock.api.models.Definitions;
+import org.forgerock.api.models.Parameter;
 import org.forgerock.api.models.Paths;
 import org.forgerock.api.models.Resource;
 import org.forgerock.api.models.Schema;
@@ -124,19 +125,7 @@ public class SmsRouteTree implements RequestHandler, Describable<ApiDescription,
     private final String uriTemplate;
     private final Set<String> hiddenFromUI = new HashSet<>();
     private final boolean supportGeneralActions;
-    private static final List<Action> GENERAL_ACTIONS = asList(
-            action()
-                    .name(NEXT_DESCENDENTS)
-                    .response(schemaFromResource("nextdescendents.response"))
-                    .build(),
-            action()
-                    .name(GET_ALL_TYPES)
-                    .response(schemaFromResource("types.response"))
-                    .build(),
-            action()
-                    .name(GET_CREATABLE_TYPES)
-                    .response(schemaFromResource("types.response"))
-                    .build());
+    private final List<Action> generalActions;
 
     private static Schema schemaFromResource(String schemaName) {
         return DescriptorUtils.fromResource("SmsRouteTree." + schemaName + ".schema.json", SmsRouteTree.class);
@@ -155,8 +144,9 @@ public class SmsRouteTree implements RequestHandler, Describable<ApiDescription,
      *                              {@code getAllTypes} and {@code getCreateableTypes}.
      */
     SmsRouteTree(Map<MatchingResourcePath, CrestAuthorizationModule> authzModules,
-            CrestAuthorizationModule defaultAuthzModule, boolean isRoot, SmsRouter router, Filter filter,
-            ResourcePath path, Predicate<String> handlesFunction, String uriTemplate, boolean supportGeneralActions) {
+                 CrestAuthorizationModule defaultAuthzModule, boolean isRoot, SmsRouter router, Filter filter,
+                 ResourcePath path, Predicate<String> handlesFunction, String uriTemplate,
+                 boolean supportGeneralActions, Parameter generalActionParameter) {
         this.authzModules = authzModules;
         this.defaultAuthzModule = defaultAuthzModule;
         this.isRoot = isRoot;
@@ -167,6 +157,31 @@ public class SmsRouteTree implements RequestHandler, Describable<ApiDescription,
         this.handlesFunction = handlesFunction;
         this.uriTemplate = uriTemplate;
         this.supportGeneralActions = supportGeneralActions;
+        this.generalActions = asList(
+                generalActionParameter == null
+                        ? action().name(NEXT_DESCENDENTS)
+                        .response(schemaFromResource("nextdescendents.response"))
+                        .build()
+                        : action().name(NEXT_DESCENDENTS)
+                        .parameter(generalActionParameter)
+                        .response(schemaFromResource("nextdescendents.response"))
+                        .build(),
+                generalActionParameter == null
+                        ? action().name(GET_ALL_TYPES)
+                        .response(schemaFromResource("types.response"))
+                        .build()
+                        : action().name(GET_ALL_TYPES)
+                        .parameter(generalActionParameter)
+                        .response(schemaFromResource("types.response"))
+                        .build(),
+                generalActionParameter == null
+                        ? action().name(GET_CREATABLE_TYPES)
+                        .response(schemaFromResource("types.response"))
+                        .build()
+                        : action().name(GET_CREATABLE_TYPES)
+                        .parameter(generalActionParameter)
+                        .response(schemaFromResource("types.response"))
+                        .build());
     }
 
     final void addSubTree(SmsRouteTree subTree) {
@@ -430,7 +445,7 @@ public class SmsRouteTree implements RequestHandler, Describable<ApiDescription,
                         .description(resource.getDescription())
                         .title(resource.getTitle())
                         .actions(asList(resource.getActions()))
-                        .actions(GENERAL_ACTIONS)
+                        .actions(generalActions)
                         .create(resource.getCreate())
                         .read(resource.getRead())
                         .update(resource.getUpdate())
@@ -449,7 +464,7 @@ public class SmsRouteTree implements RequestHandler, Describable<ApiDescription,
                     .mvccSupported(false)
                     .title(localizableString(uriTemplate, ".title"))
                     .description(localizableString(uriTemplate, ".description"))
-                    .actions(GENERAL_ACTIONS).build()).build();
+                    .actions(generalActions).build()).build();
         }
         Paths.Builder paths = paths().put("", basePath);
         for (String path : api.getPaths().getNames()) {

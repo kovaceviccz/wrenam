@@ -12,6 +12,7 @@
  * information: "Portions copyright [year] [name of copyright owner]".
  *
  * Copyright 2016 ForgeRock AS.
+ * Portions copyright 2025 Wren Security.
  */
 
 package org.forgerock.openam.core.rest.sms;
@@ -73,6 +74,10 @@ public class CoreRestSmsGuiceModule extends AbstractModule {
         install(new FactoryModuleBuilder()
                 .implement(SmsGlobalSingletonProvider.class, SmsGlobalSingletonProvider.class)
                 .build(SmsGlobalSingletonProviderFactory.class));
+
+        install(new FactoryModuleBuilder()
+                .implement(SmsUserServiceSingletonProvider.class, SmsUserServiceSingletonProvider.class)
+                .build(SmsUserServiceSingletonProviderFactory.class));
 
         Multibinder<UiRolePredicate> userUiRolePredicates = Multibinder.newSetBinder(binder(),
                 UiRolePredicate.class);

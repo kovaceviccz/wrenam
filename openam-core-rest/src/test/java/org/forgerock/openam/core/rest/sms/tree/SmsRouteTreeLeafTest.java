@@ -44,7 +44,7 @@ public class SmsRouteTreeLeafTest {
         };
 
         routeTree = new SmsRouteTree(Collections.<MatchingResourcePath, CrestAuthorizationModule>emptyMap(), null, false,
-                router, null, resourcePath(""), handlesFunction, null, false);
+                router, null, resourcePath(""), handlesFunction, null, false, null);
     }
 
     @DataProvider(name = "handlesFunction")

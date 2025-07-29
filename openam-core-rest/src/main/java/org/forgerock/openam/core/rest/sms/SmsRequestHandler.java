@@ -12,7 +12,7 @@
  * information: "Portions copyright [year] [name of copyright owner]".
  *
  * Copyright 2015-2016 ForgeRock AS.
- * Portions copyright 2022-2023 Wren Security
+ * Portions copyright 2022-2025 Wren Security
  */
 
 package org.forgerock.openam.core.rest.sms;
@@ -51,7 +51,9 @@ import java.util.regex.Pattern;
 import javax.inject.Inject;
 import javax.inject.Named;
 
+import org.forgerock.api.enums.ParameterSource;
 import org.forgerock.api.models.ApiDescription;
+import org.forgerock.api.models.Parameter;
 import org.forgerock.authz.filter.crest.api.CrestAuthorizationModule;
 import org.forgerock.guice.core.InjectorHolder;
 import org.forgerock.http.ApiProducer;
@@ -141,7 +143,7 @@ public class SmsRequestHandler implements RequestHandler, SMSObjectListener, Ser
     private final SmsServiceHandlerFunction smsServiceHandlerFunction;
     private final SitesResourceProvider sitesResourceProvider;
     private final ServersResourceProvider serversResourceProvider;
-    private final List<Describable.Listener> apiListeners = new CopyOnWriteArrayList<>();
+    private final List<Listener> apiListeners = new CopyOnWriteArrayList<>();
 
     private final ReadWriteLock lock = new ReentrantReadWriteLock();
     private final Lock read = lock.readLock();
@@ -177,16 +179,29 @@ public class SmsRequestHandler implements RequestHandler, SMSObjectListener, Ser
         Map<MatchingResourcePath, CrestAuthorizationModule> authzModules = type.equals(SchemaType.GLOBAL)
                 ? globalAuthzModules
                 : Collections.<MatchingResourcePath, CrestAuthorizationModule>emptyMap();
-        routeTree = tree(authzModules, privilegeAuthzModule,
-                branch("/authentication", smsServiceHandlerFunction.AUTHENTICATION_HANDLES_FUNCTION,
-                        leaf("/modules", smsServiceHandlerFunction.AUTHENTICATION_MODULE_HANDLES_FUNCTION, true),
-                        filter("/chains", smsServiceHandlerFunction.AUTHENTICATION_CHAINS_HANDLES_FUNCTION,
-                                authenticationChainsFilter)),
-                branch("/federation", smsServiceHandlerFunction.CIRCLES_OF_TRUST_HANDLES_FUNCTION,
-                        leaf("/entityproviders", smsServiceHandlerFunction.ENTITYPROVIDER_HANDLES_FUNCTION, false)),
-                leaf("/agents",smsServiceHandlerFunction.AGENTS_MODULE_HANDLES_FUNCTION, true),
-                leaf("/services", smsServiceHandlerFunction, true)
-        );
+        if (type == SchemaType.USER) {
+            routeTree = tree(
+                    authzModules,
+                    privilegeAuthzModule,
+                    true,
+                    Parameter.parameter()
+                            .name("user")
+                            .type("String")
+                            .source(ParameterSource.PATH)
+                            .description("The user's username")
+                            .build());
+        } else {
+                routeTree = tree(authzModules, privilegeAuthzModule,
+                        branch("/authentication", smsServiceHandlerFunction.AUTHENTICATION_HANDLES_FUNCTION,
+                                leaf("/modules", smsServiceHandlerFunction.AUTHENTICATION_MODULE_HANDLES_FUNCTION, true),
+                                filter("/chains", smsServiceHandlerFunction.AUTHENTICATION_CHAINS_HANDLES_FUNCTION,
+                                        authenticationChainsFilter)),
+                        branch("/federation", smsServiceHandlerFunction.CIRCLES_OF_TRUST_HANDLES_FUNCTION,
+                                leaf("/entityproviders", smsServiceHandlerFunction.ENTITYPROVIDER_HANDLES_FUNCTION, false)),
+                        leaf("/agents",smsServiceHandlerFunction.AGENTS_MODULE_HANDLES_FUNCTION, true),
+                        leaf("/services", smsServiceHandlerFunction, true)
+                );
+        }
 
         this.smsServiceHandlerFunction = smsServiceHandlerFunction;
         this.sitesResourceProvider = sitesResourceProvider;
@@ -307,12 +322,14 @@ public class SmsRequestHandler implements RequestHandler, SMSObjectListener, Ser
         excludedServiceCollections.put(SchemaType.GLOBAL,
                 asSet(smsServiceHandlerFunction.AUTHENTICATION_MODULE_HANDLES_FUNCTION));
         excludedServiceCollections.put(SchemaType.ORGANIZATION, CollectionUtils.<Predicate<String>>asSet());
+        excludedServiceSingletons.put(SchemaType.USER, CollectionUtils.<Predicate<String>>asSet());
+        excludedServiceCollections.put(SchemaType.USER, CollectionUtils.<Predicate<String>>asSet());
     }
 
     /**
      * Responds to changes in the SMS data layer - we only handle changes to the deployed services.
      * @param dn The DN of the SMS item that changed.
-     * @param type The type of change - see {@link com.sun.identity.sm.SMSObjectListener}.
+     * @param type The type of change - see {@link SMSObjectListener}.
      */
     @Override
     public void objectChanged(String dn, int type) {
@@ -466,6 +483,13 @@ public class SmsRequestHandler implements RequestHandler, SMSObjectListener, Ser
                 debug.message("Adding global schema REST SMS endpoints for service: {}", serviceName);
                 addGlobalPaths("", new ArrayList<ServiceSchema>(), organizationSchema, organizationSchema,
                         dynamicSchema, routes, DEFAULT_IGNORED_ROUTES, null);
+            }
+        } else if (schemaType == SchemaType.USER) {
+            ServiceSchema userSchema = ssm.getUserSchema();
+            if (userSchema != null) {
+                debug.message("Adding user schema REST SMS endpoints for service: {}", serviceName);
+                addPaths("", new ArrayList<ServiceSchema>(), userSchema, null, routes,
+                        DEFAULT_IGNORED_ROUTES, null);
             }
         } else {
             if (organizationSchema != null) {

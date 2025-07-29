@@ -12,6 +12,7 @@
  * information: "Portions copyright [year] [name of copyright owner]".
  *
  * Copyright 2015-2016 ForgeRock AS.
+ * Portions copyright 2025 Wren Security
  */
 
 package org.forgerock.openam.core.rest;
@@ -19,7 +20,6 @@ package org.forgerock.openam.core.rest;
 import static org.forgerock.http.routing.RoutingMode.EQUALS;
 import static org.forgerock.http.routing.RoutingMode.STARTS_WITH;
 import static org.forgerock.json.resource.Resources.newHandler;
-import static org.forgerock.json.resource.Resources.newSingleton;
 import static org.forgerock.openam.audit.AuditConstants.Component.CONFIG;
 import static org.forgerock.openam.audit.AuditConstants.Component.REALMS;
 import static org.forgerock.openam.core.rest.sms.SmsServerPropertiesResource.SERVER_DEFAULT_NAME;
@@ -33,10 +33,7 @@ import java.util.regex.Pattern;
 import javax.inject.Inject;
 
 import org.apache.commons.io.IOUtils;
-import org.forgerock.json.resource.RequestHandler;
-import org.forgerock.json.resource.Router;
 import org.forgerock.openam.core.rest.sms.SmsRequestHandlerFactory;
-import org.forgerock.openam.core.rest.sms.SmsServerPropertiesResource;
 import org.forgerock.openam.core.rest.sms.SmsServerPropertiesResourceFactory;
 import org.forgerock.openam.rest.AbstractRestRouteProvider;
 import org.forgerock.openam.rest.ResourceRouter;
@@ -91,7 +88,12 @@ public class SmsRestRouteProvider extends AbstractRestRouteProvider {
                     .authorizeWith(CrestPrivilegeAuthzModule.class)
                     .toRequestHandler(EQUALS, newHandler(smsServerPropertiesResourceFactory.create(tab, false)));
         }
-    }
+
+        realmRouter.route("users/{user}/services")
+                .auditAs(CONFIG)
+                .authorizeWith(CrestPrivilegeAuthzModule.class)
+                .toRequestHandler(STARTS_WITH, smsRequestHandlerFactory.create(SchemaType.USER));
+        }
 
     @Inject
     public void setSmsRequestHandlerFactory(SmsRequestHandlerFactory smsRequestHandlerFactory) {

@@ -12,7 +12,7 @@
  * information: "Portions copyright [year] [name of copyright owner]".
  *
  * Copyright 2015-2016 ForgeRock AS.
- * Portions copyright 2022 Wren Security
+ * Portions copyright 2022-2025 Wren Security
  */
 
 package org.forgerock.openam.core.rest.sms;
@@ -109,7 +109,7 @@ public class SmsSingletonProvider extends SmsResourceProvider {
             @Named("DefaultLocale") Locale defaultLocale, AMIdentityRepositoryFactory idRepoFactory) {
         super(schema, type, subSchemaPath, uriPath, serviceHasInstanceName, converter, debug, resourceBundleCache,
                 defaultLocale);
-        Reject.ifTrue(type != SchemaType.GLOBAL && type != SchemaType.ORGANIZATION, "Unsupported type: " + type);
+        Reject.ifTrue(type != SchemaType.GLOBAL && type != SchemaType.ORGANIZATION && type != SchemaType.USER, "Unsupported type: " + type);
         this.dynamicSchema = dynamicSchema;
         if (dynamicSchema != null) {
             this.dynamicConverter = new SmsJsonConverter(dynamicSchema);

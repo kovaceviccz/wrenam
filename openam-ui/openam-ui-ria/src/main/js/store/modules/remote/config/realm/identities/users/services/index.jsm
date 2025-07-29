@@ -12,14 +12,19 @@
  * information: "Portions copyright [year] [name of copyright owner]".
  *
  * Copyright 2018-2019 ForgeRock AS.
- * Portions copyright 2025 Wren Security.
  */
 import { combineReducers } from "redux";
 
-import groups from "./groups/index";
-import users from "./users/index";
+import creatables from "./creatables";
+import instances from "./instances";
+import schema from "./schema";
+import template from "./template";
+import types from "./types";
 
 export default combineReducers({
-    groups,
-    users
+    creatables,
+    instances,
+    schema,
+    template,
+    types
 });

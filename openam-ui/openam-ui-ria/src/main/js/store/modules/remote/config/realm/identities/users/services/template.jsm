@@ -12,14 +12,21 @@
  * information: "Portions copyright [year] [name of copyright owner]".
  *
  * Copyright 2018-2019 ForgeRock AS.
- * Portions copyright 2025 Wren Security.
  */
-import { combineReducers } from "redux";
+import { createAction, handleActions } from "redux-actions";
 
-import groups from "./groups/index";
-import users from "./users/index";
+// Types
+const SET_TEMPLATE = "remote/config/realm/identities/users/services/template/SET_TEMPLATE";
 
-export default combineReducers({
-    groups,
-    users
-});
+// Actions
+export const setTemplate = createAction(SET_TEMPLATE,
+    (payload) => payload, (payload, serviceId) => ({ serviceId }));
+
+// Reducer
+const initialState = null;
+export default handleActions({
+    [SET_TEMPLATE]: (state, action) => ({
+        ...state,
+        [action.meta.serviceId]: action.payload
+    })
+}, initialState);

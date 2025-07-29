@@ -659,6 +659,31 @@ public final class IdUtils {
         return theID;
     }
 
+    public static AMIdentity getGroup(String uName, String realm) {
+        AMIdentity groupIdentity = null;
+        AMIdentityRepository amIdRepo = getAMIdentityRepository(DNMapper.orgNameToDN(realm));
+        IdSearchControl idsc = new IdSearchControl();
+        idsc.setRecursive(true);
+        idsc.setAllReturnAttributes(true);
+        Set<AMIdentity> results = Collections.EMPTY_SET;
+
+        try {
+            idsc.setMaxResults(0);
+            IdSearchResults searchResults = amIdRepo.searchIdentities(IdType.GROUP, uName, idsc);
+            if (searchResults != null) {
+                results = searchResults.getSearchResults();
+            }
+
+            groupIdentity = results.iterator().next();
+        } catch (IdRepoException e) {
+            debug.warning("Error searching for group identity");
+        } catch (SSOException e) {
+            debug.warning("User's ssoToken has expired");
+        }
+
+        return groupIdentity;
+    }
+
     /**
      * Returns <code>AMIdentityRepostiory</code> handle for an organization.
      *

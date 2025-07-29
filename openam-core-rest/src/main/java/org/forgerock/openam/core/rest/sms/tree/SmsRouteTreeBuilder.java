@@ -27,6 +27,7 @@ import java.util.Set;
 
 import javax.annotation.Nonnull;
 
+import org.forgerock.api.models.Parameter;
 import org.forgerock.authz.filter.crest.api.CrestAuthorizationModule;
 import org.wrensecurity.guava.common.base.Predicate;
 import org.wrensecurity.guava.common.base.Predicates;
@@ -61,18 +62,36 @@ public class SmsRouteTreeBuilder {
         this.uriTemplate = uriTemplate;
     }
 
-    /**
-     * Creates a {@code SmsRouteTree} structure with the provided sub trees.
-     *
-     * @param subTreeBuilders The sub trees.
-     * @return A {@code SmsRouteTree}.
-     */
     public static SmsRouteTree tree(Map<MatchingResourcePath, CrestAuthorizationModule> authModules,
             CrestAuthorizationModule defaultAuthModule,
             SmsRouteTreeBuilder... subTreeBuilders) {
         SmsRouter router = new SmsRouter();
         SmsRouteTree tree = new SmsRouteTree(authModules, defaultAuthModule, true, router, null, empty(),
-                Predicates.<String>alwaysFalse(), null, false);
+                Predicates.<String>alwaysFalse(), null, false, null);
+        for (SmsRouteTreeBuilder subTreeBuilder : subTreeBuilders) {
+            tree.addSubTree(subTreeBuilder.build(tree));
+        }
+        return tree;
+    }
+
+    public static SmsRouteTree tree(
+            Map<MatchingResourcePath, CrestAuthorizationModule> authModules,
+            CrestAuthorizationModule defaultAuthModule,
+            boolean supportGeneralActions,
+            Parameter generalActionParameter,
+            SmsRouteTreeBuilder... subTreeBuilders) {
+        SmsRouter router = new SmsRouter();
+        SmsRouteTree tree = new SmsRouteTree(
+                authModules,
+                defaultAuthModule,
+                true,
+                router,
+                null,
+                empty(),
+                Predicates.<String>alwaysFalse(),
+                null,
+                supportGeneralActions,
+                generalActionParameter);
         for (SmsRouteTreeBuilder subTreeBuilder : subTreeBuilders) {
             tree.addSubTree(subTreeBuilder.build(tree));
         }
@@ -178,7 +197,7 @@ public class SmsRouteTreeBuilder {
 
         ResourcePath path = SmsRouteTree.concat(parent.path, uriTemplate);
         SmsRouteTree tree = new SmsRouteTree(parent.authzModules, parent.defaultAuthzModule, false, router, filter,
-                path, handlesFunction, uriTemplate, supportGeneralActions);
+                path, handlesFunction, uriTemplate, supportGeneralActions, null);
         for (SmsRouteTreeBuilder subTreeBuilder : subTreeBuilders) {
             tree.addSubTree(subTreeBuilder.build(tree));
         }
