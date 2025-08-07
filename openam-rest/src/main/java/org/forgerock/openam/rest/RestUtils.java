@@ -12,7 +12,7 @@
  * information: "Portions copyright [year] [name of copyright owner]".
  *
  * Copyright 2012-2016 ForgeRock AS.
- * Portions Copyright 2023 Wren Security
+ * Portions Copyright 2023-2025 Wren Security.
  */
 
 package org.forgerock.openam.rest;
@@ -330,6 +330,24 @@ final public class RestUtils {
     public static boolean isContractConformantUserProvidedIdCreate(Context serverContext, CreateRequest createRequest) {
         return createRequest.getNewResourceId() != null
                 && crestProtocolVersion(serverContext).compareTo(PROTOCOL_VERSION_1) > 0;
+    }
+
+    /**
+     * Remove admin privilege if user is no longer a member of the special <em>RealmAdmin</em> group.
+     *
+     * @param user the {@link AMIdentity} representing the user to examine
+     *
+     * @throws IdRepoException if the IDM layer cannot be queried
+     * @throws SSOException if the caller’s SSO token is invalid or expired
+     */
+    public static void removeExpiredAdminPrivilegeForUser(AMIdentity user)
+            throws IdRepoException, SSOException {
+        Set<AMIdentity> groups = user.getMemberships(IdType.GROUP);
+        boolean isStillRealmAdmin = groups.stream()
+                .anyMatch(group -> "RealmAdmin".equals(group.getName()));
+        if (!isStillRealmAdmin) {
+            adminUserIds.computeIfPresent(user.getUniversalId(), (uid, ignored) -> null);
+        }
     }
 
     /**
