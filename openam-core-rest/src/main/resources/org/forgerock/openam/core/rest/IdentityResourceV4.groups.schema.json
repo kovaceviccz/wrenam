@@ -1,0 +1,23 @@
+{
+  "type": "object",
+  "properties": {
+    "members": {
+      "type": "object",
+      "title": "i18n:api-descriptor/IdentityResourceV4#groups.schema.section.members",
+      "propertyOrder": 1,
+      "properties": {
+        "uniqueMember": {
+          "title": "i18n:api-descriptor/IdentityResourceV4#groups.schema.uniqueMember.title",
+          "description": "i18n:api-descriptor/IdentityResourceV4#groups.schema.uniqueMember.description",
+          "propertyOrder": 100,
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "required": false,
+          "exampleValue": ""
+        }
+      }
+    }
+  }
+}
