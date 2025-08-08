@@ -12,6 +12,7 @@
  * information: "Portions copyright [year] [name of copyright owner]".
  *
  * Copyright 2015-2016 ForgeRock AS.
+ * Portions Copyright 2025 Wren Security.
  */
 
 package org.forgerock.openam.core.rest;
@@ -45,6 +46,7 @@ import org.forgerock.openam.rest.ResourceRouter;
 import org.forgerock.openam.rest.RestRouteProvider;
 import org.forgerock.openam.rest.ServiceRouter;
 import org.forgerock.openam.rest.authz.AdminOnlyAuthzModule;
+import org.forgerock.openam.rest.authz.AdminOrDelegatedAdminAuthzModule;
 import org.forgerock.openam.rest.authz.CrestPrivilegeAuthzModule;
 import org.forgerock.openam.rest.authz.ResourceOwnerOrSuperUserAuthzModule;
 import org.forgerock.openam.services.MailService;
@@ -86,7 +88,9 @@ public class CoreRestRouteProvider extends AbstractRestRouteProvider {
                 .forVersion(2, 1)
                 .toCollection(Key.get(IdentityResourceV2.class, Names.named("UsersResource")))
                 .forVersion(3, 0)
-                .toCollection(Key.get(IdentityResourceV3.class, Names.named("UsersResource")));
+                .toCollection(Key.get(IdentityResourceV3.class, Names.named("UsersResource")))
+                .forVersion(4, 0)
+                .toCollection(Key.get(IdentityResourceV4.class, Names.named("UsersResource")));
 
         realmRouter.route("groups")
                 .auditAs(GROUPS)
@@ -95,7 +99,14 @@ public class CoreRestRouteProvider extends AbstractRestRouteProvider {
                 .forVersion(2, 1)
                 .toCollection(Key.get(IdentityResourceV2.class, Names.named("GroupsResource")))
                 .forVersion(3, 0)
-                .toCollection(Key.get(IdentityResourceV3.class, Names.named("GroupsResource")));
+                .toCollection(Key.get(IdentityResourceV3.class, Names.named("GroupsResource")))
+                .forVersion(4, 0)
+                .toCollection(Key.get(IdentityResourceV4.class, Names.named("GroupsResource")));
+
+        realmRouter.route("groups/allauthenticatedusers")
+                .auditAs(GROUPS)
+                .authorizeWith(AdminOrDelegatedAdminAuthzModule.class)
+                .toAnnotatedCollection(AllAuthenticatedUsersResource.class);
 
         realmRouter.route("agents")
                 .auditAs(POLICY_AGENT)
@@ -104,7 +115,9 @@ public class CoreRestRouteProvider extends AbstractRestRouteProvider {
                 .forVersion(2, 1)
                 .toCollection(Key.get(IdentityResourceV2.class, Names.named("AgentsResource")))
                 .forVersion(3, 0)
-                .toCollection(Key.get(IdentityResourceV3.class, Names.named("AgentsResource")));
+                .toCollection(Key.get(IdentityResourceV3.class, Names.named("AgentsResource")))
+                .forVersion(4, 0)
+                .toCollection(Key.get(IdentityResourceV4.class, Names.named("AgentsResource")));
 
         realmRouter.route("users/{user}/devices/trusted")
                 .auditAs(DEVICES)
