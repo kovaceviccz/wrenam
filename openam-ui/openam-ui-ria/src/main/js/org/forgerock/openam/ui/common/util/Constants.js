@@ -21,7 +21,7 @@
  * your own identifying information:
  * "Portions Copyrighted [year] [name of copyright owner]"
  *
- * Portions copyright 2024 Wren Security.
+ * Portions Copyrighted 2024-2025 Wren Security.
  */
 
 define([

@@ -12,16 +12,13 @@
  * information: "Portions copyright [year] [name of copyright owner]".
  *
  * Copyright 2016 ForgeRock AS.
+ * Portions copyright 2025 Wren Security.
  */
-
-import { combineReducers } from "redux";
 
 import server from "./server";
 import session from "./session";
 
-const rootReducer = combineReducers({
+export default {
     server,
     session
-});
-
-export default rootReducer;
+};

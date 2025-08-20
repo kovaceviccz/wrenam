@@ -12,6 +12,7 @@
  * information: "Portions copyright [year] [name of copyright owner]".
  *
  * Copyright 2016 ForgeRock AS.
+ * Portions Copyright 2025 Wren Security.
  */
 
 package org.forgerock.openam.core.rest;
@@ -26,12 +27,14 @@ import java.util.Set;
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
 import com.google.inject.multibindings.Multibinder;
+import com.iplanet.dpro.session.service.SessionService;
 import com.sun.identity.idsvcs.opensso.IdentityServicesImpl;
 import org.forgerock.openam.core.CoreWrapper;
 import org.forgerock.openam.forgerockrest.utils.MailServerLoader;
 import org.forgerock.openam.services.RestSecurityProvider;
 import org.forgerock.openam.services.baseurl.BaseURLProviderFactory;
 import org.forgerock.openam.sm.config.ConsoleConfigHandler;
+import org.forgerock.openam.utils.Config;
 
 /**
  * Guice module for binding the Identity REST endpoints.
@@ -75,12 +78,26 @@ public class CoreRestIdentityGuiceModule extends AbstractModule {
     @Named("UsersResource")
     @Inject
     @Singleton
-    public IdentityResourceV3 getUsersResource(MailServerLoader mailServerLoader,
+    public IdentityResourceV3 getUsersResourceV3(MailServerLoader mailServerLoader,
             IdentityServicesImpl identityServices, CoreWrapper coreWrapper, RestSecurityProvider restSecurityProvider,
             ConsoleConfigHandler configHandler, BaseURLProviderFactory baseURLProviderFactory,
             @Named("PatchableUserAttributes") Set<String> patchableAttributes, Set<UiRolePredicate> uiRolePredicates) {
         return new IdentityResourceV3(IdentityResourceV2.USER_TYPE, mailServerLoader, identityServices, coreWrapper,
                 restSecurityProvider, configHandler, baseURLProviderFactory, patchableAttributes, uiRolePredicates);
+    }
+
+    @Provides
+    @Named("UsersResource")
+    @Inject
+    @Singleton
+    public IdentityResourceV4 getUsersResourceV4(MailServerLoader mailServerLoader,
+            IdentityServicesImpl identityServices, CoreWrapper coreWrapper, RestSecurityProvider restSecurityProvider,
+            ConsoleConfigHandler configHandler, BaseURLProviderFactory baseURLProviderFactory,
+            @Named("PatchableUserAttributes") Set<String> patchableAttributes, Set<UiRolePredicate> uiRolePredicates,
+            Config<SessionService> sessionService) {
+        return new IdentityResourceV4(IdentityResourceV4.USER_TYPE, mailServerLoader, identityServices, coreWrapper,
+                restSecurityProvider, configHandler, baseURLProviderFactory, patchableAttributes, uiRolePredicates,
+                sessionService);
     }
 
     @Provides
@@ -109,11 +126,25 @@ public class CoreRestIdentityGuiceModule extends AbstractModule {
     @Named("GroupsResource")
     @Inject
     @Singleton
-    public IdentityResourceV3 getGroupsResource(MailServerLoader mailServerLoader,
+    public IdentityResourceV3 getGroupsResourceV3(MailServerLoader mailServerLoader,
             IdentityServicesImpl identityServices, CoreWrapper coreWrapper, RestSecurityProvider restSecurityProvider,
             ConsoleConfigHandler configHandler, BaseURLProviderFactory baseURLProviderFactory, Set<UiRolePredicate> uiRolePredicates) {
         return new IdentityResourceV3(IdentityResourceV2.GROUP_TYPE, mailServerLoader, identityServices,
                 coreWrapper, restSecurityProvider, configHandler, baseURLProviderFactory, Collections.<String>emptySet(), uiRolePredicates);
+    }
+
+    @Provides
+    @Named("GroupsResource")
+    @Inject
+    @Singleton
+    public IdentityResourceV4 getGroupsResourceV4(MailServerLoader mailServerLoader,
+            IdentityServicesImpl identityServices, CoreWrapper coreWrapper, RestSecurityProvider restSecurityProvider,
+            ConsoleConfigHandler configHandler, BaseURLProviderFactory baseURLProviderFactory,
+            @Named("PatchableUserAttributes") Set<String> patchableAttributes, Set<UiRolePredicate> uiRolePredicates,
+            Config<SessionService> sessionService) {
+        return new IdentityResourceV4(IdentityResourceV4.GROUP_TYPE, mailServerLoader, identityServices, coreWrapper,
+                restSecurityProvider, configHandler, baseURLProviderFactory, patchableAttributes, uiRolePredicates,
+                sessionService);
     }
 
     @Provides
@@ -142,11 +173,25 @@ public class CoreRestIdentityGuiceModule extends AbstractModule {
     @Named("AgentsResource")
     @Inject
     @Singleton
-    public IdentityResourceV3 getAgentsResource(MailServerLoader mailServerLoader,
+    public IdentityResourceV3 getAgentsResourceV3(MailServerLoader mailServerLoader,
             IdentityServicesImpl identityServices, CoreWrapper coreWrapper, RestSecurityProvider restSecurityProvider,
             ConsoleConfigHandler configHandler, BaseURLProviderFactory baseURLProviderFactory, Set<UiRolePredicate> uiRolePredicates) {
         return new IdentityResourceV3(IdentityResourceV2.AGENT_TYPE, mailServerLoader, identityServices,
                 coreWrapper, restSecurityProvider, configHandler, baseURLProviderFactory, Collections.<String>emptySet(), uiRolePredicates);
+    }
+
+    @Provides
+    @Named("AgentsResource")
+    @Inject
+    @Singleton
+    public IdentityResourceV4 getAgentsResourceV4(MailServerLoader mailServerLoader,
+            IdentityServicesImpl identityServices, CoreWrapper coreWrapper, RestSecurityProvider restSecurityProvider,
+            ConsoleConfigHandler configHandler, BaseURLProviderFactory baseURLProviderFactory,
+            @Named("PatchableUserAttributes") Set<String> patchableAttributes, Set<UiRolePredicate> uiRolePredicates,
+            Config<SessionService> sessionService) {
+        return new IdentityResourceV4(IdentityResourceV2.AGENT_TYPE, mailServerLoader, identityServices, coreWrapper,
+                restSecurityProvider, configHandler, baseURLProviderFactory, patchableAttributes, uiRolePredicates,
+                sessionService);
     }
 
     @Provides

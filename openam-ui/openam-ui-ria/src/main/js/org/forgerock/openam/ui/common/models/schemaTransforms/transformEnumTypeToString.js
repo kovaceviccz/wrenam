@@ -11,17 +11,21 @@
  * Header, with the fields enclosed by brackets [] replaced by your own identifying
  * information: "Portions copyright [year] [name of copyright owner]".
  *
- * Copyright 2016 ForgeRock AS.
+ * Copyright 2016-2018 ForgeRock AS.
+ * Portions copyright 2025 Wren Security.
  */
 
-define([], () => {
+define([
+    "lodash"
+], (_) => {
     /**
-    * Recursively add string type to enum
-    * @param {Object} property Property to transform
-    */
+     * Recursively add string type to enum
+     * @param {Object} property Property to transform
+     */
     return function transformEnumTypeToString (property) {
         if (property.hasOwnProperty("enum")) {
-            property.type = "string";
+            const path = _.get(property, "properties.inherited") ? "properties.value.type" : "type";
+            _.set(property, path, "string");
         }
     };
 });
