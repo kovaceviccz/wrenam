@@ -12,6 +12,7 @@
  * information: "Portions copyright [year] [name of copyright owner]".
  *
  * Copyright 2015-2016 ForgeRock AS.
+ * Portions copyright 2025 Wren Security.
  */
 
 package org.forgerock.openam.core.rest.devices;
@@ -57,9 +58,9 @@ import org.forgerock.util.promise.Promise;
  *
  * @since 13.0.0
  */
-public abstract class UserDevicesResource<T extends UserDevicesDao> extends RealmAwareResource {
+public abstract class UserDevicesResource<T extends UserDevicesDao<?>> extends RealmAwareResource {
 
-    static final String UUID_KEY = "uuid";
+    protected static final String UUID_KEY = "uuid";
 
     protected final T userDevicesDao;
 
