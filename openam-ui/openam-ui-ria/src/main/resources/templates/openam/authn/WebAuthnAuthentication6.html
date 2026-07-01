@@ -1,0 +1,35 @@
+<div class="container">
+    <form action="" method="post" class="form login col-sm-6 col-sm-offset-3" autocomplete="off" data-stage="{{reqs.stage}}">
+        <fieldset class="row">
+            {{! WebAuthn authentication stage 6: recovery-code retry after an invalid entry.
+                The invalid-code message is field-level validation copy for the retry input. }}
+            <div class="page-header">
+                <h1 class="text-center">{{t "templates.user.LoginTemplate.passkeyRecoveryTitle"}}</h1>
+            </div>
+            <p class="text-muted text-center passkey-prompt-help">{{t "templates.user.LoginTemplate.passkeyRecoveryHelp"}}</p>
+
+            {{#each reqs.callbacks}}
+            {{#equals type "NameCallback"}}
+            {{! Render the next recovery-code attempt. The module limits invalid attempts server-side. }}
+            <div class="form-group has-error">
+                {{callbackRender}}
+                <span class="help-block" role="alert" data-webauthn-recovery-error>
+                    {{t "templates.user.LoginTemplate.passkeyRecoveryInvalid"}}
+                </span>
+            </div>
+            {{/equals}}
+            {{#equals type "ConfirmationCallback"}}
+            {{! Continue posts the retry attempt back to the same recovery-code validator. }}
+            <input id="button_0"
+                   name="callback_{{input.index}}"
+                   type="submit"
+                   role="button"
+                   index="0"
+                   value="{{t 'common.form.continue'}}"
+                   data-webauthn-recovery-continue
+                   class="btn btn-lg btn-block btn-primary btn-uppercase">
+            {{/equals}}
+            {{/each}}
+        </fieldset>
+    </form>
+</div>

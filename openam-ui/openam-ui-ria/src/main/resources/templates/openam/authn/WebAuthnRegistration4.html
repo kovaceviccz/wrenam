@@ -1,0 +1,53 @@
+<div class="container">
+    {{! WebAuthn registration stage 4: one-time recovery-code reveal after the credential has
+        been verified and stored. The Java module seals the stored record immediately, so later
+        profile views show only the remaining-code count unless new codes are generated. }}
+    {{#if reqs.header}}
+    <div class="page-header">
+        <h1 class="text-center">{{reqs.header}}</h1>
+    </div>
+    {{/if}}
+    <form action="" method="post" class="form col-sm-6 col-sm-offset-3" autocomplete="off" data-stage="{{reqs.stage}}">
+        <fieldset class="row">
+            <p class="text-muted text-center passkey-prompt-help">{{t "templates.user.LoginTemplate.recoveryCodesHelp"}}</p>
+
+            {{#each reqs.callbacks}}
+            {{#equals type "TextOutputCallback"}}
+            {{! The TextOutputCallback message is the newline-separated recovery-code set to show once. }}
+            <div class="form-group">
+                <textarea id="webauthnRecoveryCodes" class="form-control" rows="12" readonly>{{this.output.[0].value}}</textarea>
+            </div>
+            <div class="form-group">
+                {{! Plain-text download uses the same one-time callback value already shown in the textarea. }}
+                <a class="btn btn-lg btn-block btn-default btn-uppercase"
+                   href="{{textFileDataUri this.output.[0].value}}"
+                   download="wrenam-recovery-codes.txt"
+                   data-download-recovery-codes>
+                    <i class="fa fa-download" aria-hidden="true"></i>
+                    {{t "templates.user.LoginTemplate.downloadRecoveryCodes"}}
+                </a>
+            </div>
+            {{/equals}}
+            {{/each}}
+
+            {{#each reqs.callbacks}}
+            {{#equals type "ConfirmationCallback"}}
+            {{! Acknowledgement only: clicking this finishes the registration chain. }}
+            <div class="form-group">
+                {{#each output}}
+                {{#equals name "options"}}
+                <input id="button_0"
+                       name="callback_1"
+                       class="btn btn-lg btn-block btn-primary btn-uppercase"
+                       type="submit"
+                       role="button"
+                       value="{{this.value.[0]}}"
+                       index="0">
+                {{/equals}}
+                {{/each}}
+            </div>
+            {{/equals}}
+            {{/each}}
+        </fieldset>
+    </form>
+</div>

@@ -13,10 +13,9 @@
  *
  * Copyright 2025 Wren Security. All rights reserved.
  */
-package org.wrensecurity.wrenam.authentication.modules.webauthn;
+package org.wrensecurity.wrenam.authentication.modules.webauthn.impl;
 
 import com.iplanet.sso.SSOException;
-import com.sun.identity.authentication.spi.AuthLoginException;
 import com.sun.identity.security.AdminTokenAction;
 import com.sun.identity.shared.datastruct.CollectionHelper;
 import com.sun.identity.sm.SMSException;
@@ -28,11 +27,13 @@ import java.security.AccessController;
 import java.util.Map;
 import java.util.Set;
 import org.forgerock.openam.core.rest.devices.services.webauthn.WebAuthnService;
+import org.wrensecurity.wrenam.authentication.modules.webauthn.core.WebAuthnCeremonyError;
+import org.wrensecurity.wrenam.authentication.modules.webauthn.core.WebAuthnCeremonyException;
 
 /**
- * Resolves WebAuthn service configuration used by authentication and registration modules.
+ * Resolve WebAuthn service configuration used by authentication and registration modules.
  */
-public class WebAuthnConfigManager {
+public class WebAuthnServiceConfig {
 
     private static final String USER_ID_KEY = "wrensec-am-auth-webauthn-user-id-attr";
 
@@ -42,6 +43,12 @@ public class WebAuthnConfigManager {
 
     private static final String DEFAULT_USER_DISPLAY_NAME_KEY = "cn";
 
+    /**
+     * Create WebAuthn service configuration access.
+     */
+    public WebAuthnServiceConfig() {
+    }
+
     private ServiceConfig getServiceConfig(String realm) throws SMSException, SSOException {
         ServiceConfigManager scm = new ServiceConfigManager(
                 AccessController.doPrivileged(AdminTokenAction.getInstance()),
@@ -50,22 +57,45 @@ public class WebAuthnConfigManager {
         return scm.getOrganizationConfig(realm, null);
     }
 
+    /**
+     * Return the configured attribute containing the WebAuthn user handle.
+     *
+     * @param realm realm containing the configuration
+     * @return user handle attribute name
+     * @throws SMSException if service configuration cannot be read
+     * @throws SSOException if the admin token cannot read service configuration
+     * @see <a href="https://www.w3.org/TR/webauthn-3/#sctn-user-handle-privacy">WebAuthn Level 3 &sect;14.6.1</a>
+     */
     public String getUserIdAttribute(String realm) throws SMSException, SSOException {
         ServiceConfig config = getServiceConfig(realm);
         Map<String, Set<String>> attrs = config.getAttributes();
         return CollectionHelper.getMapAttr(attrs, USER_ID_KEY, DEFAULT_USER_ID_KEY);
     }
 
+    /**
+     * Return the configured attribute containing the user display name.
+     *
+     * @param realm realm containing the configuration
+     * @return user display name attribute name
+     * @throws SMSException if service configuration cannot be read
+     * @throws SSOException if the admin token cannot read service configuration
+     */
     public String getUserDisplayNameAttribute(String realm) throws SMSException, SSOException {
         ServiceConfig config = getServiceConfig(realm);
         Map<String, Set<String>> attrs = config.getAttributes();
         return CollectionHelper.getMapAttr(attrs, USER_DISPLAY_NAME_KEY, DEFAULT_USER_DISPLAY_NAME_KEY);
     }
 
-    public String normalizeConfiguredOrigin(String configuredOrigin, String resourceName)
-            throws AuthLoginException {
+    /**
+     * Normalize a configured relying party origin for WebAuthn origin comparison.
+     *
+     * @param configuredOrigin configured origin
+     * @return normalized origin containing only scheme, host, and optional port
+     * @throws WebAuthnCeremonyException if the origin is missing or invalid
+     */
+    public String normalizeConfiguredOrigin(String configuredOrigin) throws WebAuthnCeremonyException {
         if (configuredOrigin == null || configuredOrigin.isBlank()) {
-            throw new AuthLoginException(resourceName, "missingOriginConfig", null);
+            throw new WebAuthnCeremonyException(WebAuthnCeremonyError.MISSING_ORIGIN_CONFIG);
         }
         try {
             URI origin = new URI(configuredOrigin.trim());
@@ -73,19 +103,24 @@ public class WebAuthnConfigManager {
                     || origin.getPath() != null && !origin.getPath().isEmpty() && !"/".equals(origin.getPath())
                     || origin.getQuery() != null
                     || origin.getFragment() != null) {
-                throw new AuthLoginException(resourceName, "invalidOriginConfig", null);
+                throw new WebAuthnCeremonyException(WebAuthnCeremonyError.INVALID_ORIGIN_CONFIG);
             }
+            String scheme = origin.getScheme().toLowerCase();
             StringBuilder normalized = new StringBuilder()
-                    .append(origin.getScheme().toLowerCase())
+                    .append(scheme)
                     .append("://")
                     .append(origin.getHost().toLowerCase());
-            if (origin.getPort() >= 0) {
+            if (origin.getPort() >= 0 && !isDefaultPort(scheme, origin.getPort())) {
                 normalized.append(':').append(origin.getPort());
             }
             return normalized.toString();
         } catch (URISyntaxException e) {
-            throw new AuthLoginException(resourceName, "invalidOriginConfig", null, e);
+            throw new WebAuthnCeremonyException(WebAuthnCeremonyError.INVALID_ORIGIN_CONFIG, e);
         }
+    }
+
+    private boolean isDefaultPort(String scheme, int port) {
+        return "https".equals(scheme) && port == 443 || "http".equals(scheme) && port == 80;
     }
 
 }

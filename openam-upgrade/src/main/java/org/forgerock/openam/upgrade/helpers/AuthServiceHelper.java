@@ -60,7 +60,7 @@ public class AuthServiceHelper extends AbstractUpgradeHelper {
     private final static String NEW_PUSH = "org.forgerock.openam.authentication.modules.push.AuthenticatorPush";
     private final static String NEW_PUSH_REGISTRATION = "org.forgerock.openam.authentication.modules.push.registration.AuthenticatorPushRegistration";
     private final static String NEW_DUO = "org.wrensecurity.wrenam.authentication.modules.duo.Duo";
-    private final static String NEW_WEBAUTHN = "org.wrensecurity.wrenam.authentication.modules.webauthn.WebAuthn";
+    private final static String NEW_WEBAUTHN = "org.wrensecurity.wrenam.authentication.modules.webauthn.authentication.WebAuthnAuthentication";
     private final static String NEW_WEBAUTHN_REGISTRATION = "org.wrensecurity.wrenam.authentication.modules.webauthn.registration.WebAuthnRegistration";
 
     // Note: Add new modules to this array.

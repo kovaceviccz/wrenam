@@ -1,0 +1,97 @@
+<div class="container">
+    <form action="" method="post" class="form login col-sm-6 col-sm-offset-3" autocomplete="off" data-stage="{{reqs.stage}}">
+        <fieldset class="row">
+            {{! WebAuthn authentication stage 3: run navigator.credentials.get() in the browser.
+                HiddenValueCallback is the JSON transport back to Java; TextOutputCallback renders
+                the generated browser script. Neither callback should create visible layout. }}
+            {{#each reqs.callbacks}}
+            {{#equals type "HiddenValueCallback"}}
+            <div class="hidden">{{callbackRender}}</div>
+            {{/equals}}
+            {{#equals type "TextOutputCallback"}}
+            <div class="hidden">{{callbackRender}}</div>
+            {{/equals}}
+            {{/each}}
+
+            {{! Shared passkey status surface. XUI owns the localized strings below; the WebAuthn
+                browser script is only the controller that maps stable browser failure codes to this
+                native Wren:AM presentation. }}
+            <div id="passkey-authn-panel"
+                 class="passkey-prompt"
+                 data-passkey-state="waiting"
+                 data-passkey-default-title="{{reqs.header}}"
+                 data-passkey-default-help="{{t 'templates.user.LoginTemplate.approvePasskeySignIn'}}"
+                 data-passkey-success-title="{{t 'templates.user.LoginTemplate.passkeySuccessTitle'}}"
+                 data-passkey-success-help="{{t 'templates.user.LoginTemplate.passkeySuccessHelp'}}"
+                 data-passkey-error-title="{{t 'templates.user.LoginTemplate.passkeyFailedTitle'}}"
+                 data-passkey-error-help="{{t 'templates.user.LoginTemplate.passkeyFailedHelp'}}">
+                <div class="passkey-status" role="status" aria-live="polite">
+                    <div class="page-header">
+                        <h1 class="text-center" data-passkey-heading>
+                            <span data-passkey-heading-text>{{reqs.header}}</span>
+                        </h1>
+                    </div>
+                    <p class="text-muted text-center passkey-prompt-help" data-passkey-help>
+                        {{t "templates.user.LoginTemplate.approvePasskeySignIn"}}
+                    </p>
+                    <div class="panel panel-default passkey-waiting-panel" data-passkey-waiting>
+                        <div class="panel-body text-center">
+                            <h4 class="awaiting-response">
+                                <i class="fa fa-circle-o-notch fa-spin text-primary" aria-hidden="true"></i>
+                                {{t "templates.user.LoginTemplate.waitingForResponse"}}
+                            </h4>
+                        </div>
+                    </div>
+                </div>
+                <button type="button"
+                        class="btn btn-lg btn-block btn-primary btn-uppercase hidden"
+                        data-passkey-try-again>
+                    {{t "templates.user.LoginTemplate.passkeyTryAgain"}}
+                </button>
+            </div>
+
+            {{#each reqs.callbacks}}
+            {{#equals type "ConfirmationCallback"}}
+            {{! Hidden success submit. Keep this outside data-passkey-secondary-actions because
+                the browser script hides and disables the visible fallback block before it clicks
+                this button after a successful passkey assertion. }}
+            <input id="button_1"
+                   name="callback_2"
+                   role="button"
+                   style="display: none;"
+                   type="submit"
+                   value=""
+                   index="0">
+            {{! Visible fallback actions while the ceremony is pending or recoverably failed.
+                The browser script owns availability for this block; CSS only gives it spacing. }}
+            <div class="form-group passkey-secondary-actions" data-passkey-secondary-actions>
+                {{#each output}}
+                {{#equals name "options"}}
+                <input id="button_2"
+                       name="callback_2"
+                       role="button"
+                       type="submit"
+                       value="{{t 'common.form.cancel'}}"
+                       index="1"
+                       class="btn btn-lg btn-block btn-default btn-uppercase">
+                {{! Recovery code is still a ConfirmationCallback option, not a plain link:
+                    submitting index 2 moves the Java module into the recovery-code state. }}
+                <div class="passkey-help">
+                    <span class="text-muted">{{t "templates.user.LoginTemplate.cantUsePasskey"}}</span>
+                    <input id="button_3"
+                           name="callback_2"
+                           role="button"
+                           type="submit"
+                           value="{{t 'templates.user.LoginTemplate.useRecoveryCode'}}"
+                           index="2"
+                           data-webauthn-recovery
+                           class="btn btn-link am-btn-link-no-padding passkey-help-link">
+                </div>
+                {{/equals}}
+                {{/each}}
+            </div>
+            {{/equals}}
+            {{/each}}
+        </fieldset>
+    </form>
+</div>

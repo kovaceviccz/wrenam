@@ -44,5 +44,27 @@
             <groupId>org.wrensecurity.wrenam</groupId>
             <artifactId>openam-core-rest</artifactId>
         </dependency>
+
+        <dependency>
+            <groupId>org.wrensecurity.wrenam</groupId>
+            <artifactId>openam-shared</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>external</groupId>
+            <artifactId>esapiport</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.testng</groupId>
+            <artifactId>testng</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 </project>

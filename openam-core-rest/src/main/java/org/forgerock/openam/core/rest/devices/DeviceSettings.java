@@ -31,6 +31,13 @@ public abstract class DeviceSettings {
     protected String[] recoveryCodes = new String[0];
 
     /**
+     * Whether the recovery codes for this device have been revealed to the user and must no longer be
+     * disclosed in plaintext through read/query responses. Defaults to {@code false} so that legacy
+     * profiles (and device types that never seal, such as OATH and Push) keep returning their codes.
+     */
+    protected boolean recoveryCodesSealed = false;
+
+    /**
      * Configures the internal UUID.
      */
     public DeviceSettings() {
@@ -74,6 +81,25 @@ public abstract class DeviceSettings {
      */
     public String[] getRecoveryCodes() {
         return recoveryCodes;
+    }
+
+    /**
+     * Marks whether the recovery codes have been revealed once and should no longer be returned in plaintext.
+     *
+     * @param recoveryCodesSealed {@code true} once the codes have been disclosed to the user.
+     */
+    public void setRecoveryCodesSealed(boolean recoveryCodesSealed) {
+        this.recoveryCodesSealed = recoveryCodesSealed;
+    }
+
+    /**
+     * Indicates whether the recovery codes have been sealed (revealed once) and must no longer be returned
+     * in plaintext through read/query responses.
+     *
+     * @return {@code true} if the codes are sealed.
+     */
+    public boolean isRecoveryCodesSealed() {
+        return recoveryCodesSealed;
     }
 
 }

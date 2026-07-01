@@ -17,6 +17,7 @@
 
 import $ from "jquery";
 import _ from "lodash";
+import moment from "moment";
 
 import {
     remove as removeOAth,
@@ -28,7 +29,8 @@ import {
 } from "org/forgerock/openam/ui/user/dashboard/services/PushDeviceService";
 import {
     remove as removeWebAuthn,
-    getAll as getAllWebAuthn
+    getAll as getAllWebAuthn,
+    getAcceptedCredentialsSignal
 } from "org/forgerock/openam/ui/user/dashboard/services/WebAuthnDeviceService";
 import AbstractView from "org/forgerock/commons/ui/common/main/AbstractView";
 import DeviceDetailsDialog from "org/forgerock/openam/ui/user/dashboard/views/DeviceDetailsDialog";
@@ -40,11 +42,46 @@ import showConfirmationBeforeAction from "org/forgerock/openam/ui/admin/utils/fo
 const getAttributeFromElement = (element, attribute) => $(element).closest(`div[${attribute}]`).attr(attribute);
 const getUUIDFromElement = (element) => getAttributeFromElement(element, "data-device-uuid");
 const getTypeFromElement = (element) => getAttributeFromElement(element, "data-device-type");
+const formatCreatedAt = (createdAt) => {
+    if (!createdAt) {
+        return null;
+    }
+    const date = moment(createdAt);
+    return date.isValid() ? date.format("ll") : null;
+};
+const addDeviceMetadata = (devices, metadata) => _.map(devices, (device) => {
+    const createdAtDisplay = formatCreatedAt(device.createdAt);
+    return _.assign({}, device, metadata, createdAtDisplay ? { createdAtDisplay } : {});
+});
 const handleReject = (response) => {
     Messages.addMessage({
         type: Messages.TYPE_DANGER,
         response
     });
+};
+const signalAllAcceptedCredentials = () => {
+    if (!window.PublicKeyCredential ||
+            typeof window.PublicKeyCredential.getClientCapabilities !== "function" ||
+            typeof window.PublicKeyCredential.signalAllAcceptedCredentials !== "function") {
+        return;
+    }
+    window.PublicKeyCredential.getClientCapabilities().then((capabilities) => {
+        if (!capabilities || capabilities.signalAllAcceptedCredentials !== true) {
+            return;
+        }
+        getAcceptedCredentialsSignal().then((signal) => {
+            if (!signal || signal.signalAvailable !== true) {
+                return;
+            }
+            window.PublicKeyCredential.signalAllAcceptedCredentials({
+                rpId: signal.rpId,
+                userId: signal.userId,
+                allAcceptedCredentialIds: _.isArray(signal.allAcceptedCredentialIds)
+                    ? signal.allAcceptedCredentialIds
+                    : []
+            }).catch(_.noop);
+        }, _.noop);
+    }, _.noop);
 };
 
 class DeviceManagementView extends AbstractView {
@@ -68,11 +105,13 @@ class DeviceManagementView extends AbstractView {
         const deleteFunc = {
             oath: removeOAth,
             push: removePush,
-            webAuthn: removeWebAuthn
+            passkey: removeWebAuthn
         }[type];
 
         showConfirmationBeforeAction({
-            message: $.t("openam.authDevices.confirmDeleteText")
+            message: $.t("openam.authDevices.confirmDeleteText", {
+                type: $.t(`openam.authDevices.types.${type}`)
+            })
         }, () => {
             deleteFunc(uuid).then(() => {
                 this.render();
@@ -95,13 +134,24 @@ class DeviceManagementView extends AbstractView {
     }
     render () {
         Promise.all([getAllOAth(), getAllPush(), getAllWebAuthn()]).then((value) => {
-            const oathDevices = _.map(value[0], _.partial(_.merge, { type: "oath", icon: "clock-o" }));
-            const pushDevices = _.map(value[1], _.partial(_.merge, { type: "push", icon: "bell-o" }));
-            const webAuthnDevices = _.map(value[2], _.partial(_.merge, { type: "webAuthn", icon: "key" }));
+            const oathDevices = addDeviceMetadata(value[0], {
+                type: "oath",
+                icon: "clock-o"
+            });
+            const pushDevices = addDeviceMetadata(value[1], {
+                type: "push",
+                icon: "bell-o"
+            });
+            const webAuthnDevices = addDeviceMetadata(value[2], {
+                type: "passkey",
+                icon: "key"
+            });
 
+            this.data.hasOathDevices = oathDevices.length > 0;
             this.data.devices = [...oathDevices, ...pushDevices, ...webAuthnDevices];
 
             this.parentRender();
+            signalAllAcceptedCredentials();
         }, handleReject);
     }
 }

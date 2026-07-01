@@ -1,0 +1,31 @@
+<div class="container">
+    <form action="" method="post" class="form login col-sm-6 col-sm-offset-3" autocomplete="off" data-stage="{{reqs.stage}}">
+        <fieldset class="row">
+            {{! WebAuthn authentication stage 4: first recovery-code entry screen after the user
+                chooses "Use a recovery code" from the passkey ceremony screen. }}
+            <div class="page-header">
+                <h1 class="text-center">{{t "templates.user.LoginTemplate.passkeyRecoveryTitle"}}</h1>
+            </div>
+            <p class="text-muted text-center passkey-prompt-help">{{t "templates.user.LoginTemplate.passkeyRecoveryHelp"}}</p>
+
+            {{#each reqs.callbacks}}
+            {{#equals type "ConfirmationCallback"}}
+            {{! Continue submits the NameCallback rendered below; the Java module validates and
+                consumes a matching recovery code exactly once. }}
+            <input id="button_0"
+                   name="callback_{{input.index}}"
+                   type="submit"
+                   role="button"
+                   index="0"
+                   value="{{t 'common.form.continue'}}"
+                   data-webauthn-recovery-continue
+                   class="btn btn-lg btn-block btn-primary btn-uppercase">
+            {{else}}
+            <div class="form-group">
+                {{callbackRender}}
+            </div>
+            {{/equals}}
+            {{/each}}
+        </fieldset>
+    </form>
+</div>

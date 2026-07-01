@@ -1,8 +1,10 @@
 <div class="panel panel-default">
+    {{! Sign-in methods dashboard panel. Passkey cards route through the WebAuthn service. }}
     <div class="panel-heading fr-panel-heading-with-button" role="tab" id="deviceManagementCollapseHeading">
         <h4 class="panel-title collapse-title">
             <a data-toggle="collapse" href="#deviceManagementCollapse" aria-expanded="true" aria-controls="deviceManagementCollapseHeading" class="">{{t "openam.authDevices.header"}}</a>
         </h4>
+        {{#if hasOathDevices}}
         <div class="dropdown pull-right">
             <button type="button" class="btn btn-link panel-button-link dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                 <i class="fa fa-ellipsis-v fa-lg"></i>
@@ -11,6 +13,7 @@
                 <li><a data-settings href="#" role="button" aria-haspopup="true"><i class="fa fa-cog"></i> {{t "common.form.settings" }}</a></li>
             </ul>
         </div>
+        {{/if}}
     </div>
     <div id="deviceManagementCollapse" class="panel-collapse collapse in" role="tabpanel" aria-labelledby="deviceManagementCollapse" aria-expanded="true">
         <div class="panel-body">
@@ -23,16 +26,14 @@
                                     <i class="fa fa-ellipsis-v fa-lg"></i>
                                 </button>
                                 <ul class="dropdown-menu pull-left" role="menu">
-                                    {{#equals type "webAuthn"}}
-                                    <li><a data-delete href="#" role="button" aria-haspopup="true"><i class="fa fa-times"></i> {{ t "common.form.delete" }}</a></li>
-                                    {{else}}
+                                    {{! For WebAuthn this opens the sealed recovery-code dialog; for other
+                                        device types the view keeps using the existing device details behavior. }}
                                     <li><a data-recovery-codes href="#" role="button" aria-haspopup="true"><i class="fa fa-list"></i> {{ t "openam.authDevices.menu.recoveryCodes" }}</a></li>
                                     <li role="separator" class="divider"></li>
                                     <li><a data-delete href="#" role="button" aria-haspopup="true"><i class="fa fa-times"></i> {{ t "common.form.delete" }}</a></li>
-                                    {{/equals}}
                                 </ul>
                             </div>
-                            <a data-details href="#">
+                            <a data-details href="#" class="device-details">
                                 <div class="card-body card-body-with-menu">
                                     <div class="card-icon-circle bg-primary">
                                         <i class="fa fa-{{icon}}"></i>

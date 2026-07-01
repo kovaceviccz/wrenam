@@ -1,19 +1,63 @@
 <form class="form-horizontal">
+    {{! Device details dialog shared by authenticator cards. WebAuthn devices pass recovery-code
+        metadata in addition to the device name; OATH-style devices may still use the unsealed path. }}
     <div class="form-group">
         <label class="control-label col-sm-4">{{t "openam.authDevices.deviceDetailsDialog.deviceName"}}</label>
         <div class="col-sm-7">
             <input type="text" class="form-control input-btn" value="{{deviceName}}" readonly>
         </div>
     </div>
-    {{#equals deviceType "webAuthn"}}
-    {{else}}
+    {{#if createdAtDisplay}}
+    <div class="form-group">
+        <label class="control-label col-sm-4">{{t "openam.authDevices.deviceDetailsDialog.createdOn"}}</label>
+        <div class="col-sm-7">
+            <p class="form-control-static">{{createdAtDisplay}}</p>
+        </div>
+    </div>
+    {{/if}}
     <div class="form-group">
         <label class="control-label col-sm-4">{{t "openam.authDevices.deviceDetailsDialog.recoveryCodes"}}</label>
         <div class="col-sm-7">
-            <textarea class="text-center" rows="12" readonly>{{#each recoveryCodes}}{{this}}
-{{/each}}</textarea>
+            {{#if sealed}}
+                {{! WebAuthn records are sealed after the first reveal. hasCodes is true only
+                    immediately after generating a replacement set from this dialog. }}
+                {{#if hasCodes}}
+                <textarea class="form-control" rows="12" readonly>{{recoveryCodes}}</textarea>
+                <div class="alert alert-warning recovery-codes-warning" role="alert">{{t "openam.authDevices.deviceDetailsDialog.recoveryCodesRevealOnce"}}</div>
+                <p>
+                    {{! Download only uses freshly revealed plaintext codes already present in the dialog. }}
+                    <a class="btn btn-default"
+                       href="{{textFileDataUri recoveryCodes}}"
+                       download="wrenam-recovery-codes.txt"
+                       data-download-recovery-codes>
+                        <i class="fa fa-download" aria-hidden="true"></i>
+                        {{t "openam.authDevices.deviceDetailsDialog.downloadRecoveryCodes"}}
+                    </a>
+                </p>
+                <p class="text-muted recovery-codes-count">{{t "openam.authDevices.deviceDetailsDialog.recoveryCodesRemainingLabel"}} {{recoveryCodesRemaining}}</p>
+                {{else}}
+                {{! Normal sealed state: never echo stored recovery-code values back to the browser. }}
+                <p class="text-muted">{{t "openam.authDevices.deviceDetailsDialog.recoveryCodesHidden"}}</p>
+                <p class="text-muted">{{t "openam.authDevices.deviceDetailsDialog.recoveryCodesRemainingLabel"}} {{recoveryCodesRemaining}}</p>
+                <button type="button" class="btn btn-default" data-regenerate-recovery-codes>
+                    {{t "openam.authDevices.deviceDetailsDialog.regenerateRecoveryCodes"}}
+                </button>
+                <p class="help-block">{{t "openam.authDevices.deviceDetailsDialog.regenerateRecoveryCodesHelp"}}</p>
+                {{/if}}
+            {{else}}
+            {{! Legacy/unsealed devices still expose the stored code list, matching the existing dashboard contract. }}
+            <textarea class="form-control" rows="12" readonly>{{recoveryCodes}}</textarea>
+            <p>
+                <a class="btn btn-default"
+                   href="{{textFileDataUri recoveryCodes}}"
+                   download="wrenam-recovery-codes.txt"
+                   data-download-recovery-codes>
+                    <i class="fa fa-download" aria-hidden="true"></i>
+                    {{t "openam.authDevices.deviceDetailsDialog.downloadRecoveryCodes"}}
+                </a>
+            </p>
             <span>{{t "openam.authDevices.deviceDetailsDialog.copyRecoveryCodes"}}</span>
+            {{/if}}
         </div>
     </div>
-    {{/equals}}
 </form>

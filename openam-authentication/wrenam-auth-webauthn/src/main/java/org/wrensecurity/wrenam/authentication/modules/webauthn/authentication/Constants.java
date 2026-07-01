@@ -13,7 +13,7 @@
  *
  * Copyright 2025 Wren Security. All rights reserved.
  */
-package org.wrensecurity.wrenam.authentication.modules.webauthn;
+package org.wrensecurity.wrenam.authentication.modules.webauthn.authentication;
 
 /**
  * Constants for the WebAuthn authentication module.
@@ -23,7 +23,7 @@ public final class Constants {
     private Constants() {
     }
 
-    static final String RESOURCE_NAME = "amAuthWebAuthn";
+    static final String RESOURCE_NAME = "amAuthWebAuthnAuthentication";
 
     /**
      * Module configuration key that whether to prompt the user for a username if the module is used
@@ -67,12 +67,34 @@ public final class Constants {
 
     static final int STATE_VALIDATE_SCRIPT_OUTPUT = 3;
 
+    static final int STATE_RECOVERY_CODE = 4;
+
+    static final int STATE_RECOVERY_CODE_USED = 5;
+
+    static final int STATE_RECOVERY_CODE_ERROR = 6;
+
     static final int VALIDATE_SCRIPT_OUTPUT_HIDDEN_VALUE_CALLBACK_INDEX = 0;
 
     static final int VALIDATE_SCRIPT_OUTPUT_SCRIPT_CALLBACK_INDEX = 1;
 
     static final int VALIDATE_SCRIPT_OUTPUT_CONFIRMATION_CALLBACK_INDEX = 2;
 
+    static final int VALIDATE_SCRIPT_OUTPUT_CONTINUE_INDEX = 0;
+
+    static final int VALIDATE_SCRIPT_OUTPUT_CANCEL_INDEX = 1;
+
+    static final int VALIDATE_SCRIPT_OUTPUT_RECOVERY_INDEX = 2;
+
     static final int STATE_PROMPT_USERNAME_NAME_CALLBACK_INDEX = 0;
+
+    static final int RECOVERY_CODE_CALLBACK_INDEX = 0;
+
+    static final int RECOVERY_CODE_ERROR_CALLBACK_INDEX = 1;
+
+    /**
+     * Maximum recovery-code guesses accepted in one authentication attempt before failing the module and engaging
+     * the normal invalid-password/lockout path. Match the existing AuthenticatorOATH OTP/recovery-code retry policy.
+     */
+    static final int MAX_RECOVERY_CODE_ATTEMPTS = 3;
 
 }

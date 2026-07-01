@@ -18,7 +18,6 @@ package org.wrensecurity.wrenam.authentication.modules.webauthn.registration;
 import static org.forgerock.openam.utils.StringUtils.isBlank;
 
 import java.io.IOException;
-import java.net.URI;
 import java.util.Base64;
 import java.util.List;
 import java.util.Set;
@@ -33,18 +32,19 @@ import org.forgerock.util.Reject;
 
 /**
  * Represent options for creating a {@code PublicKeyCredential} via the WebAuthn API.
+ *
+ * @see <a href="https://www.w3.org/TR/webauthn-3/#dictdef-publickeycredentialcreationoptions">
+ *     WebAuthn Level 3 PublicKeyCredentialCreationOptions</a>
  */
 public class PublicKeyCredentialCreationOptions {
 
-    private static final Set<String> ATTESTATION_VALUES = Set.of("none");
+    private static final String ATTESTATION_NONE = "none";
 
     private static final Set<String> AUTHENTICATOR_ATTACHMENT_VALUES = Set.of("platform", "cross-platform");
 
     private static final Set<String> RESIDENT_KEY_VALUES = Set.of("discouraged", "preferred", "required");
 
     private static final Set<String> USER_VERIFICATION_VALUES = Set.of("required", "preferred", "discouraged");
-
-    private final String attestation;
 
     private final String authenticatorAttachment;
 
@@ -73,25 +73,25 @@ public class PublicKeyCredentialCreationOptions {
     private final String displayName;
 
     private PublicKeyCredentialCreationOptions(Builder builder) {
-        this.attestation = builder.attestation;
         this.authenticatorAttachment = builder.authenticatorAttachment;
         this.residentKey = builder.residentKey;
         this.userVerification = builder.userVerification;
-        this.challenge = builder.challenge;
-        this.pubKeyCredParams = builder.pubKeyCredParams;
-        this.excludeCredentials = builder.excludeCredentials;
+        this.challenge = builder.challenge.clone();
+        this.pubKeyCredParams = List.copyOf(builder.pubKeyCredParams);
+        this.excludeCredentials = builder.excludeCredentials == null ? null : List.copyOf(builder.excludeCredentials);
         this.rpId = builder.rpId;
         this.rpName = builder.rpName;
         this.timeout = builder.timeout;
         this.challengeIssuedAtMillis = builder.challengeIssuedAtMillis;
-        this.userId = builder.userId;
+        this.userId = builder.userId.clone();
         this.userName = builder.userName;
         this.displayName = builder.displayName;
     }
 
+    /**
+     * Build {@link PublicKeyCredentialCreationOptions} instances.
+     */
     public static class Builder {
-
-        private String attestation;
 
         private String authenticatorAttachment;
 
@@ -118,19 +118,6 @@ public class PublicKeyCredentialCreationOptions {
         private String userName;
 
         private String displayName;
-
-        /**
-         * Set the attestation conveyance preference.
-         *
-         * @param attestation one of {@code none}, {@code direct}, {@code indirect}, or {@code enterprise}
-         * @return this builder instance
-         * @see <a href="https://www.w3.org/TR/webauthn-3/#enum-attestation-convey">
-         *     §5.4.7. Attestation Conveyance Preference Enumeration</a>
-         */
-        public Builder attestation(String attestation) {
-            this.attestation = attestation;
-            return this;
-        }
 
         /**
          * Set the authenticator attachment modality.
@@ -180,7 +167,7 @@ public class PublicKeyCredentialCreationOptions {
          *     §5.4. Options for Credential Creation</a>
          */
         public Builder challenge(byte[] challenge) {
-            this.challenge = challenge;
+            this.challenge = challenge == null ? null : challenge.clone();
             return this;
         }
 
@@ -191,7 +178,7 @@ public class PublicKeyCredentialCreationOptions {
          * @return this builder instance
          */
         public Builder pubKeyCredParams(List<JsonValue> pubKeyCredParams) {
-            this.pubKeyCredParams = pubKeyCredParams;
+            this.pubKeyCredParams = pubKeyCredParams == null ? null : List.copyOf(pubKeyCredParams);
             return this;
         }
 
@@ -204,7 +191,7 @@ public class PublicKeyCredentialCreationOptions {
          *     §5.4. Options for Credential Creation</a>
          */
         public Builder excludeCredentials(List<WebAuthnDeviceSettings> excludeCredentials) {
-            this.excludeCredentials = excludeCredentials;
+            this.excludeCredentials = excludeCredentials == null ? null : List.copyOf(excludeCredentials);
             return this;
         }
 
@@ -213,6 +200,8 @@ public class PublicKeyCredentialCreationOptions {
          *
          * @param rpId the relying party ID (usually a domain)
          * @return this builder instance
+         * @see <a href="https://www.w3.org/TR/webauthn-3/#dom-publickeycredentialrpentity-id">
+         *     WebAuthn Level 3 PublicKeyCredentialRpEntity.id</a>
          */
         public Builder rpId(String rpId) {
             this.rpId = rpId;
@@ -224,6 +213,8 @@ public class PublicKeyCredentialCreationOptions {
          *
          * @param rpName a human-palatable name of the relying party
          * @return this builder instance
+         * @see <a href="https://www.w3.org/TR/webauthn-3/#dom-publickeycredentialentity-name">
+         *     WebAuthn Level 3 PublicKeyCredentialRpEntity.name</a>
          */
         public Builder rpName(String rpName) {
             this.rpName = rpName;
@@ -233,8 +224,10 @@ public class PublicKeyCredentialCreationOptions {
         /**
          * Set the timeout hint, in milliseconds.
          *
-         * @param timeout timeout value (≥ 0)
+         * @param timeout timeout value (>= 0)
          * @return this builder instance
+         * @see <a href="https://www.w3.org/TR/webauthn-3/#dom-publickeycredentialcreationoptions-timeout">
+         *     WebAuthn Level 3 PublicKeyCredentialCreationOptions.timeout</a>
          */
         public Builder timeout(int timeout) {
             this.timeout = timeout;
@@ -243,7 +236,6 @@ public class PublicKeyCredentialCreationOptions {
 
         /**
          * Set the server-side issue timestamp of the challenge in epoch milliseconds.
-         * If not provided, current system time will be used.
          *
          * @param challengeIssuedAtMillis challenge issue timestamp in milliseconds
          * @return this builder instance
@@ -262,7 +254,7 @@ public class PublicKeyCredentialCreationOptions {
          *     §5.4.3. User Account Parameters for Credential Generation</a>
          */
         public Builder userId(byte[] userId) {
-            this.userId = userId;
+            this.userId = userId == null ? null : userId.clone();
             return this;
         }
 
@@ -290,6 +282,11 @@ public class PublicKeyCredentialCreationOptions {
             return this;
         }
 
+        /**
+         * Build validated creation options.
+         *
+         * @return validated creation options
+         */
         public PublicKeyCredentialCreationOptions build() {
             if (userId == null || userId.length == 0) {
                 throw new IllegalArgumentException("userId is required");
@@ -307,9 +304,6 @@ public class PublicKeyCredentialCreationOptions {
             if (timeout < 0) {
                 throw new IllegalArgumentException("timeout must be at least 0");
             }
-            if (attestation != null && !ATTESTATION_VALUES.contains(attestation)) {
-                throw new IllegalArgumentException("Invalid attestation: " + attestation);
-            }
             if (authenticatorAttachment != null
                     && !AUTHENTICATOR_ATTACHMENT_VALUES.contains(authenticatorAttachment)) {
                 throw new IllegalArgumentException("Invalid authenticatorAttachment: " + authenticatorAttachment);
@@ -321,7 +315,7 @@ public class PublicKeyCredentialCreationOptions {
                 throw new IllegalArgumentException("Invalid userVerification: " + userVerification);
             }
             if (challengeIssuedAtMillis <= 0) {
-                challengeIssuedAtMillis = System.currentTimeMillis();
+                throw new IllegalArgumentException("challengeIssuedAtMillis is required");
             }
             if (pubKeyCredParams == null || pubKeyCredParams.isEmpty()) {
                 // Include broad defaults per spec recommendation
@@ -349,14 +343,14 @@ public class PublicKeyCredentialCreationOptions {
     }
 
     /**
-     * Get the attestation conveyance preference.
+     * Get the supported attestation conveyance preference.
      *
-     * @return one of {@code none}, {@code direct}, {@code indirect}, or {@code enterprise}
+     * @return {@code none}
      * @see <a href="https://www.w3.org/TR/webauthn-3/#enum-attestation-convey">
      *     §5.4.7. Attestation Conveyance Preference Enumeration</a>
      */
     public String getAttestation() {
-        return attestation;
+        return ATTESTATION_NONE;
     }
 
     /**
@@ -400,13 +394,15 @@ public class PublicKeyCredentialCreationOptions {
      *     §5.4. Options for Credential Creation</a>
      */
     public byte[] getChallenge() {
-        return challenge;
+        return challenge.clone();
     }
 
     /**
      * Get the list of supported public key credential parameters.
      *
      * @return a list of key types and algorithm identifiers
+     * @see <a href="https://www.w3.org/TR/webauthn-3/#dom-publickeycredentialcreationoptions-pubkeycredparams">
+     *     WebAuthn Level 3 PublicKeyCredentialCreationOptions.pubKeyCredParams</a>
      */
     public List<JsonValue> getPubKeyCredParams() {
         return pubKeyCredParams;
@@ -427,6 +423,8 @@ public class PublicKeyCredentialCreationOptions {
      * Get the Relying Party identifier.
      *
      * @return the relying party ID (usually a domain)
+     * @see <a href="https://www.w3.org/TR/webauthn-3/#dom-publickeycredentialrpentity-id">
+     *     WebAuthn Level 3 PublicKeyCredentialRpEntity.id</a>
      */
     public String getRpId() {
         return rpId;
@@ -436,6 +434,8 @@ public class PublicKeyCredentialCreationOptions {
      * Get the Relying Party display name.
      *
      * @return a human-palatable name of the relying party
+     * @see <a href="https://www.w3.org/TR/webauthn-3/#dom-publickeycredentialentity-name">
+     *     WebAuthn Level 3 PublicKeyCredentialRpEntity.name</a>
      */
     public String getRpName() {
         return rpName;
@@ -444,7 +444,9 @@ public class PublicKeyCredentialCreationOptions {
     /**
      * Get the timeout hint, in milliseconds.
      *
-     * @return timeout value (≥ 0)
+     * @return timeout value (>= 0)
+     * @see <a href="https://www.w3.org/TR/webauthn-3/#dom-publickeycredentialcreationoptions-timeout">
+     *     WebAuthn Level 3 PublicKeyCredentialCreationOptions.timeout</a>
      */
     public int getTimeout() {
         return timeout;
@@ -467,7 +469,7 @@ public class PublicKeyCredentialCreationOptions {
      *     §5.4.3. User Account Parameters for Credential Generation</a>
      */
     public byte[] getUserId() {
-        return userId;
+        return userId.clone();
     }
 
     /**
@@ -495,8 +497,13 @@ public class PublicKeyCredentialCreationOptions {
     }
 
     /**
-     * Serializes to a JSON value suitable for use as {@code publicKey} inside
+     * Serialize to a JSON value suitable for use as {@code publicKey} inside
      * {@code navigator.credentials.create({ publicKey: ... })}.
+     *
+     * @return JSON value accepted by the browser WebAuthn API
+     * @throws IOException if JSON serialization fails
+     * @see <a href="https://www.w3.org/TR/webauthn-3/#sctn-createCredential">
+     *     WebAuthn Level 3 navigator.credentials.create()</a>
      */
     public JsonValue toJson() throws IOException {
         JsonObject publicKey = JsonValueBuilder.jsonValue();
@@ -556,9 +563,7 @@ public class PublicKeyCredentialCreationOptions {
             }
             publicKey.put("authenticatorSelection", authenticatorSelection.build());
         }
-        if (attestation != null) {
-            publicKey.put("attestation", attestation);
-        }
+        publicKey.put("attestation", ATTESTATION_NONE);
         return publicKey.build();
     }
 

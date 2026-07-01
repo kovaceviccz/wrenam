@@ -26,6 +26,29 @@
       "items": {
         "type": "string"
       }
+    },
+    "createdAt": {
+      "type": "string",
+      "title": "i18n:api-descriptor/WebAuthnDevicesResource#schema.createdAt.title",
+      "description": "i18n:api-descriptor/WebAuthnDevicesResource#schema.createdAt.description"
+    },
+    "recoveryCodes": {
+      "type": "array",
+      "title": "i18n:api-descriptor/WebAuthnDevicesResource#schema.recoveryCodes.title",
+      "description": "i18n:api-descriptor/WebAuthnDevicesResource#schema.recoveryCodes.description",
+      "items": {
+        "type": "string"
+      }
+    },
+    "recoveryCodesSealed": {
+      "type": "boolean",
+      "title": "i18n:api-descriptor/WebAuthnDevicesResource#schema.recoveryCodesSealed.title",
+      "description": "i18n:api-descriptor/WebAuthnDevicesResource#schema.recoveryCodesSealed.description"
+    },
+    "recoveryCodesRemaining": {
+      "type": "integer",
+      "title": "i18n:api-descriptor/WebAuthnDevicesResource#schema.recoveryCodesRemaining.title",
+      "description": "i18n:api-descriptor/WebAuthnDevicesResource#schema.recoveryCodesRemaining.description"
     }
   },
   "required": [

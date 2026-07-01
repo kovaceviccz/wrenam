@@ -13,12 +13,11 @@
  *
  * Copyright 2025 Wren Security. All rights reserved.
  */
-package org.wrensecurity.wrenam.authentication.modules.webauthn;
+package org.wrensecurity.wrenam.authentication.modules.webauthn.authentication;
 
 import static org.forgerock.openam.utils.StringUtils.isBlank;
 
 import java.io.IOException;
-import java.net.URI;
 import java.util.Base64;
 import java.util.List;
 import java.util.Set;
@@ -32,6 +31,9 @@ import org.forgerock.util.Reject;
 
 /**
  * Represent options for requesting a {@code PublicKeyCredential} via the WebAuthn API.
+ *
+ * @see <a href="https://www.w3.org/TR/webauthn-3/#dictdef-publickeycredentialrequestoptions">
+ *     WebAuthn Level 3 PublicKeyCredentialRequestOptions</a>
  */
 public class PublicKeyCredentialRequestOptions {
 
@@ -51,14 +53,17 @@ public class PublicKeyCredentialRequestOptions {
     private final List<WebAuthnDeviceSettings> allowCredentials;
 
     private PublicKeyCredentialRequestOptions(Builder builder) {
-        this.challenge = builder.challenge;
+        this.challenge = builder.challenge.clone();
         this.rpId = builder.rpId;
         this.timeout = builder.timeout;
         this.challengeIssuedAtMillis = builder.challengeIssuedAtMillis;
         this.userVerification = builder.userVerification;
-        this.allowCredentials = builder.allowCredentials;
+        this.allowCredentials = builder.allowCredentials == null ? null : List.copyOf(builder.allowCredentials);
     }
 
+    /**
+     * Build {@link PublicKeyCredentialRequestOptions} instances.
+     */
     public static class Builder {
 
         private byte[] challenge;
@@ -74,7 +79,7 @@ public class PublicKeyCredentialRequestOptions {
         private List<WebAuthnDeviceSettings> allowCredentials;
 
         /**
-         * Set the challenge to be used during credential assertation.
+         * Set the challenge to be used during credential assertion.
          *
          * @param challenge a cryptographically random byte array, at least 16 bytes long
          * @return this builder instance
@@ -82,7 +87,7 @@ public class PublicKeyCredentialRequestOptions {
          *     §5.5. Options for Assertion Generation</a>
          */
         public Builder challenge(byte[] challenge) {
-            this.challenge = challenge;
+            this.challenge = challenge == null ? null : challenge.clone();
             return this;
         }
 
@@ -91,6 +96,8 @@ public class PublicKeyCredentialRequestOptions {
          *
          * @param rpId the relying party ID (usually a domain)
          * @return this builder instance
+         * @see <a href="https://www.w3.org/TR/webauthn-3/#dom-publickeycredentialrequestoptions-rpid">
+         *     WebAuthn Level 3 PublicKeyCredentialRequestOptions.rpId</a>
          */
         public Builder rpId(String rpId) {
             this.rpId = rpId;
@@ -100,8 +107,10 @@ public class PublicKeyCredentialRequestOptions {
         /**
          * Set the timeout hint, in milliseconds.
          *
-         * @param timeout timeout value (≥ 0)
+         * @param timeout timeout value (>= 0)
          * @return this builder instance
+         * @see <a href="https://www.w3.org/TR/webauthn-3/#dom-publickeycredentialrequestoptions-timeout">
+         *     WebAuthn Level 3 PublicKeyCredentialRequestOptions.timeout</a>
          */
         public Builder timeout(int timeout) {
             this.timeout = timeout;
@@ -110,7 +119,6 @@ public class PublicKeyCredentialRequestOptions {
 
         /**
          * Set the server-side issue timestamp of the challenge in epoch milliseconds.
-         * If not provided, current system time will be used.
          *
          * @param challengeIssuedAtMillis challenge issue timestamp in milliseconds
          * @return this builder instance
@@ -136,15 +144,21 @@ public class PublicKeyCredentialRequestOptions {
         /**
          * Set the list of authenticators eligible for this authentication ceremony.
          *
+         * @param allowCredentials authenticators eligible for this authentication ceremony
          * @return this builder instance
          * @see <a href="https://www.w3.org/TR/webauthn-3/#dom-publickeycredentialrequestoptions-allowcredentials">
-         *     §§5.5. Options for Assertion Generation</a>
+         *     WebAuthn Level 3 PublicKeyCredentialRequestOptions.allowCredentials</a>
          */
         public Builder allowCredentials(List<WebAuthnDeviceSettings> allowCredentials) {
-            this.allowCredentials = allowCredentials;
+            this.allowCredentials = allowCredentials == null ? null : List.copyOf(allowCredentials);
             return this;
         }
 
+        /**
+         * Build validated request options.
+         *
+         * @return validated request options
+         */
         public PublicKeyCredentialRequestOptions build() {
             if (challenge == null || challenge.length < 16) {
                 throw new IllegalArgumentException("challenge must be at least 16 bytes");
@@ -157,27 +171,29 @@ public class PublicKeyCredentialRequestOptions {
                 throw new IllegalArgumentException("Invalid userVerification: " + userVerification);
             }
             if (challengeIssuedAtMillis <= 0) {
-                challengeIssuedAtMillis = System.currentTimeMillis();
+                throw new IllegalArgumentException("challengeIssuedAtMillis is required");
             }
             return new PublicKeyCredentialRequestOptions(this);
         }
     }
 
     /**
-     * Get the challenge used during credential assertation.
+     * Get the challenge used during credential assertion.
      *
      * @return a cryptographically random byte array, at least 16 bytes long
      * @see <a href="https://www.w3.org/TR/webauthn-3/#dom-publickeycredentialrequestoptions-challenge">
      *     §5.5. Options for Assertion Generation</a>
      */
     public byte[] getChallenge() {
-        return challenge;
+        return challenge.clone();
     }
 
     /**
      * Get the Relying Party identifier.
      *
      * @return the relying party ID (usually a domain)
+     * @see <a href="https://www.w3.org/TR/webauthn-3/#dom-publickeycredentialrequestoptions-rpid">
+     *     WebAuthn Level 3 PublicKeyCredentialRequestOptions.rpId</a>
      */
     public String getRpId() {
         return rpId;
@@ -186,7 +202,9 @@ public class PublicKeyCredentialRequestOptions {
     /**
      * Get the timeout hint, in milliseconds.
      *
-     * @return timeout timeout value (≥ 0)
+     * @return timeout value (>= 0)
+     * @see <a href="https://www.w3.org/TR/webauthn-3/#dom-publickeycredentialrequestoptions-timeout">
+     *     WebAuthn Level 3 PublicKeyCredentialRequestOptions.timeout</a>
      */
     public int getTimeout() {
         return timeout;
@@ -205,6 +223,8 @@ public class PublicKeyCredentialRequestOptions {
      * Get the user verification requirement.
      *
      * @return one of {@code required}, {@code preferred}, or {@code discouraged}
+     * @see <a href="https://www.w3.org/TR/webauthn-3/#dom-publickeycredentialrequestoptions-userverification">
+     *     WebAuthn Level 3 PublicKeyCredentialRequestOptions.userVerification</a>
      */
     public String getUserVerification() {
         return userVerification;
@@ -213,9 +233,9 @@ public class PublicKeyCredentialRequestOptions {
     /**
      * Get the list of authenticators eligible for this authentication ceremony.
      *
-     * @return list of authenticators eligible for this authentication ceremony.
+     * @return list of authenticators eligible for this authentication ceremony
      * @see <a href="https://www.w3.org/TR/webauthn-3/#dom-publickeycredentialrequestoptions-allowcredentials">
-     *     §§5.5. Options for Assertion Generation</a>
+     *     WebAuthn Level 3 PublicKeyCredentialRequestOptions.allowCredentials</a>
      */
     public List<WebAuthnDeviceSettings> getAllowCredentials() {
         return allowCredentials;
@@ -226,8 +246,13 @@ public class PublicKeyCredentialRequestOptions {
     }
 
     /**
-     * Serializes to a JSON value suitable for use as {@code publicKey} inside
+     * Serialize to a JSON value suitable for use as {@code publicKey} inside
      * {@code navigator.credentials.get({ publicKey: ... })}.
+     *
+     * @return JSON value accepted by the browser WebAuthn API
+     * @throws IOException if JSON serialization fails
+     * @see <a href="https://www.w3.org/TR/webauthn-3/#sctn-discover-from-external-source">
+     *     WebAuthn Level 3 navigator.credentials.get()</a>
      */
     public JsonValue toJson() throws IOException {
         JsonObject publicKey = JsonValueBuilder.jsonValue();

@@ -85,6 +85,7 @@ define([
                     "partials/login/_Confirmation.html",
                     "partials/login/_Default.html",
                     "partials/login/_HiddenValue.html",
+                    "partials/login/_PasskeyAuthn.html",
                     "partials/login/_Password.html",
                     "partials/login/_Redirect.html",
                     "partials/login/_RememberLogin.html",

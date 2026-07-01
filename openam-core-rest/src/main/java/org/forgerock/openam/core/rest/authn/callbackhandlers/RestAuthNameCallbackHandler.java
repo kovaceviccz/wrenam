@@ -82,6 +82,9 @@ public class RestAuthNameCallbackHandler extends AbstractRestAuthCallbackHandler
 
         String prompt = callback.getPrompt();
         String name = callback.getName();
+        if (name == null) {
+            name = callback.getDefaultName();
+        }
 
         JsonValue jsonValue = JsonValueBuilder.jsonValue()
                 .put("type", CALLBACK_NAME)

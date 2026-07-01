@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+ * The contents of this file are subject to the terms of the Common Development and
+ * Distribution License (the License). You may not use this file except in compliance with the
+ * License.
+ *
+ * You can obtain a copy of the License at legal/CDDLv1.1.txt. See the License for the
+ * specific language governing permission and limitations under the License.
+ *
+ * When distributing Covered Software, include this CDDL Header Notice in each file and include
+ * the License file at legal/CDDLv1.1.txt. If applicable, add the following below the CDDL
+ * Header, with the fields enclosed by brackets [] replaced by your own identifying
+ * information: "Portions copyright [year] [name of copyright owner]".
+ *
+ * Copyright 2025 Wren Security. All rights reserved.
+-->
+<!DOCTYPE ModuleProperties PUBLIC "=//iPlanet//Authentication Module Properties XML Interface 1.0 DTD//EN"
+        "jar://com/sun/identity/authentication/Auth_Module_Properties.dtd">
+<ModuleProperties moduleName="WebAuthnAuthentication" version="1.0" >
+    <Callbacks length="0" order="1">
+    </Callbacks>
+    <Callbacks length="2" order="2" header="First, enter your username">
+        <NameCallback>
+            <Prompt>Username</Prompt>
+        </NameCallback>
+        <ConfirmationCallback>
+            <OptionValues>
+                <OptionValue>
+                    <Value>Continue</Value>
+                </OptionValue>
+            </OptionValues>
+        </ConfirmationCallback>
+    </Callbacks>
+	    <Callbacks length="3" order="3" header="Use your passkey">
+	        <HiddenValueCallback>
+	            <Id>clientScriptOutputData</Id>
+	        </HiddenValueCallback>
+	        <TextOutputCallback messageType="script">PLACEHOLDER</TextOutputCallback>
+	        <ConfirmationCallback>
+	            <OptionValues>
+	                <OptionValue>
+	                    <Value>Continue</Value>
+	                </OptionValue>
+	                <OptionValue>
+	                    <Value>Cancel</Value>
+	                </OptionValue>
+	                <OptionValue>
+	                    <Value>Use a recovery code</Value>
+	                </OptionValue>
+	            </OptionValues>
+	        </ConfirmationCallback>
+	    </Callbacks>
+	    <Callbacks length="2" order="4" timeout="120" header="Use a recovery code">
+	        <NameCallback>
+	            <Prompt>Recovery code</Prompt>
+	        </NameCallback>
+	        <ConfirmationCallback>
+	            <OptionValues>
+	                <OptionValue>
+	                    <Value>Continue</Value>
+	                </OptionValue>
+	            </OptionValues>
+	        </ConfirmationCallback>
+	    </Callbacks>
+	    <Callbacks length="2" order="5" timeout="120" header="Recovery code used">
+	        <TextOutputCallback>
+	            That code can't be used again. Use one of your remaining recovery codes next time.
+	        </TextOutputCallback>
+	        <ConfirmationCallback>
+	            <OptionValues>
+	                <OptionValue>
+	                    <Value>Continue</Value>
+	                </OptionValue>
+	            </OptionValues>
+	        </ConfirmationCallback>
+	    </Callbacks>
+	    <Callbacks length="3" order="6" timeout="120" header="Use a recovery code">
+	        <TextOutputCallback messageType="error">
+	            The recovery code isn't valid. Check the code and try again.
+	        </TextOutputCallback>
+	        <NameCallback>
+	            <Prompt>Recovery code</Prompt>
+	        </NameCallback>
+	        <ConfirmationCallback>
+	            <OptionValues>
+	                <OptionValue>
+	                    <Value>Continue</Value>
+	                </OptionValue>
+	            </OptionValues>
+	        </ConfirmationCallback>
+	    </Callbacks>
+	</ModuleProperties>

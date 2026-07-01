@@ -18,13 +18,13 @@
         PUBLIC "=//iPlanet//Service Management Services (SMS) 1.0 DTD//EN"
         "jar://com/sun/identity/sm/sms.dtd">
 <ServicesConfiguration>
-    <Service name="iPlanetAMAuthWebAuthnService" version="1.0">
+    <Service name="iPlanetAMAuthWebAuthnAuthenticationService" version="1.0">
         <Schema
-                i18nFileName="amAuthWebAuthn"
-                serviceHierarchy="/DSAMEConfig/authentication/iPlanetAMAuthWebAuthnService"
+                i18nFileName="amAuthWebAuthnAuthentication"
+                serviceHierarchy="/DSAMEConfig/authentication/iPlanetAMAuthWebAuthnAuthenticationService"
                 revisionNumber="1"
-                resourceName="amAuthWebAuthn"
-                i18nKey="iPlanetAMAuthWebAuthnServiceDescription">
+                resourceName="amAuthWebAuthnAuthentication"
+                i18nKey="iPlanetAMAuthWebAuthnAuthenticationServiceDescription">
             <Organization>
                 <AttributeSchema
                         name="wrensec-am-auth-webauthn-usernameless"

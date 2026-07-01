@@ -40,3 +40,35 @@ export function remove (uuid) {
         method: "DELETE"
     });
 }
+
+/**
+ * Get the WebAuthn signal payload for the browser's accepted-credentials sync API.
+ *
+ * @returns {Promise} resolving to a {@code signalAllAcceptedCredentials} payload or {@code signalAvailable: false}.
+ */
+export function getAcceptedCredentialsSignal () {
+    return delegate.serviceCall({
+        url: fetchUrl(`${getPath()}?_action=signalAllAcceptedCredentials`),
+        headers: { "Accept-API-Version": "protocol=1.0,resource=1.0" },
+        data: "{}",
+        suppressEvents: true,
+        method: "POST"
+    });
+}
+
+/**
+ * Invalidate the device's existing recovery codes and obtain a freshly generated set. The plaintext
+ * codes are returned exactly once in the action response; sealed devices never disclose them again on read.
+ *
+ * @param {string} uuid identifier of the WebAuthn device
+ * @returns {Promise} resolving to the action response containing the new {@code recoveryCodes}.
+ */
+export function regenerateRecoveryCodes (uuid) {
+    return delegate.serviceCall({
+        url: fetchUrl(`${getPath()}${uuid}?_action=regenerateRecoveryCodes`),
+        headers: { "Accept-API-Version": "protocol=1.0,resource=1.0" },
+        data: "{}",
+        suppressEvents: true,
+        method: "POST"
+    });
+}

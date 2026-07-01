@@ -78,7 +78,7 @@
                         <Value>org.forgerock.openam.authentication.modules.push.registration.AuthenticatorPushRegistration</Value>
                         <Value>org.forgerock.openam.authentication.modules.amster.Amster</Value>
                         <Value>org.wrensecurity.wrenam.authentication.modules.duo.Duo</Value>
-                        <Value>org.wrensecurity.wrenam.authentication.modules.webauthn.WebAuthn</Value>
+                        <Value>org.wrensecurity.wrenam.authentication.modules.webauthn.authentication.WebAuthnAuthentication</Value>
                         <Value>org.wrensecurity.wrenam.authentication.modules.webauthn.registration.WebAuthnRegistration</Value>
                     </DefaultValues>
                 </AttributeSchema>

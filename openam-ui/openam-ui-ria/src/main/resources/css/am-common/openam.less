@@ -81,6 +81,91 @@
         padding: 0;
         margin-top:-3px;
     }
+
+    .login-separator {
+        align-items: center;
+        color: #777;
+        display: flex;
+        gap: 10px;
+        margin: 18px 0;
+        text-align: center;
+        text-transform: uppercase;
+
+        &::before,
+        &::after {
+            border-top: 1px solid #eee;
+            content: "";
+            flex: 1;
+        }
+    }
+
+    /*
+     * Passkey fallback copy ("Can't use your passkey? Use a recovery code").
+     * It sits below a full-width cancel button, so the link is inline on desktop but becomes
+     * its own line on narrow screens to avoid cramped text and accidental taps.
+     */
+    .passkey-help {
+        line-height: 1.5;
+        margin-top: 18px;
+
+        .passkey-help-link {
+            display: inline-block;
+            margin-left: 6px;
+            vertical-align: baseline;
+        }
+    }
+
+    /*
+     * Visible fallback action container for the passkey ceremony screens.
+     * The WebAuthn browser scripts hide and disable [data-passkey-secondary-actions] after success;
+     * CSS deliberately owns only layout spacing so terminal-state behavior stays in JS.
+     */
+    .passkey-secondary-actions {
+        margin-top: 20px;
+    }
+
+    .passkey-prompt-help {
+        margin-bottom: 20px;
+    }
+
+    /*
+     * Passkey ceremony screens keep the FIDO handshake structure (prompt, OS/browser wait,
+     * recoverable failure, retry/fallback) but use Wren:AM's existing Bootstrap vocabulary.
+     * State transitions are handled by the WebAuthn browser script; CSS only supplies spacing.
+     */
+    .passkey-prompt {
+        .passkey-waiting-panel {
+            margin: 0 0 20px;
+        }
+
+        [data-passkey-try-again] {
+            margin-top: 0;
+        }
+    }
+
+}
+
+/* On phones, split recovery-code link text below the explanatory copy so it remains readable/tappable. */
+@media (max-width: 480px) {
+    #login-base, .bootstrap-dialog.login-dialog {
+        .passkey-help {
+            .passkey-help-link {
+                display: block;
+                margin: 8px 0 0;
+            }
+        }
+    }
+}
+
+.device-details {
+    .recovery-codes-warning {
+        margin-top: 10px;
+        margin-bottom: 15px;
+    }
+
+    .recovery-codes-count {
+        margin-bottom: 0;
+    }
 }
 
 #dialogs .validationRules {

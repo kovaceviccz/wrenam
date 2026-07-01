@@ -11,81 +11,100 @@
  * Header, with the fields enclosed by brackets [] replaced by your own identifying
  * information: "Portions copyright [year] [name of copyright owner]".
  *
- * Copyright 2025 Wren Security. All rights reserved.
+ * Copyright 2026 Wren Security. All rights reserved.
  */
 package org.wrensecurity.wrenam.authentication.modules.webauthn.registration;
 
-import static org.wrensecurity.wrenam.authentication.modules.webauthn.WebAuthnIdentityUtils.getAttributeValue;
-
-import com.iplanet.sso.SSOException;
 import com.sun.identity.authentication.callbacks.HiddenValueCallback;
-import com.sun.identity.authentication.callbacks.ScriptTextOutputCallback;
-import com.sun.identity.authentication.spi.AMLoginModule;
 import com.sun.identity.authentication.spi.AuthLoginException;
 import com.sun.identity.authentication.util.ISAuthConstants;
-import com.sun.identity.idm.AMIdentity;
-import com.sun.identity.idm.IdRepoException;
 import com.sun.identity.idm.IdUtils;
 import com.sun.identity.shared.DateUtils;
 import com.sun.identity.shared.datastruct.CollectionHelper;
-import com.sun.identity.shared.debug.Debug;
 import com.sun.identity.sm.DNMapper;
-import com.sun.identity.sm.SMSException;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.security.Principal;
 import java.text.ParseException;
-import java.util.Base64;
+import java.time.Clock;
 import java.util.Map;
 import javax.security.auth.Subject;
 import javax.security.auth.callback.Callback;
 import javax.security.auth.callback.ConfirmationCallback;
 import javax.security.auth.callback.NameCallback;
+import javax.security.auth.callback.TextOutputCallback;
 import javax.security.auth.login.LoginException;
 import org.forgerock.guice.core.InjectorHolder;
 import org.forgerock.openam.core.rest.devices.webauthn.WebAuthnDeviceSettings;
-import org.forgerock.openam.utils.IOUtils;
-import org.wrensecurity.wrenam.authentication.modules.webauthn.WebAuthnChallengeProvider;
-import org.wrensecurity.wrenam.authentication.modules.webauthn.WebAuthnCallbackResultParser;
-import org.wrensecurity.wrenam.authentication.modules.webauthn.WebAuthnConfigManager;
-import org.wrensecurity.wrenam.authentication.modules.webauthn.WebAuthnDeviceProfileManager;
-import org.wrensecurity.wrenam.authentication.modules.webauthn.WebAuthnFailureReason;
+import org.forgerock.util.Reject;
+import org.wrensecurity.wrenam.authentication.modules.webauthn.AbstractWebAuthnModule;
+import org.wrensecurity.wrenam.authentication.modules.webauthn.WebAuthnClientResponseException;
+import org.wrensecurity.wrenam.authentication.modules.webauthn.WebAuthnClientResponseParser;
+import org.wrensecurity.wrenam.authentication.modules.webauthn.WebAuthnLoginFailureReason;
 import org.wrensecurity.wrenam.authentication.modules.webauthn.WebAuthnPrincipal;
-import org.wrensecurity.wrenam.authentication.modules.webauthn.WebAuthnResponseHandler;
+import org.wrensecurity.wrenam.authentication.modules.webauthn.core.WebAuthnCeremonyException;
+import org.wrensecurity.wrenam.authentication.modules.webauthn.core.WebAuthnRegistrationCeremony;
 
 /**
  * WebAuthn registration module that lets users authenticated earlier in the chain register a device.
  */
-public class WebAuthnRegistration extends AMLoginModule {
+public class WebAuthnRegistration extends AbstractWebAuthnModule {
 
     private static final String EMPTY_SELECTION = "[Empty]";
 
-    private static final Debug debug = Debug.getInstance(RegistrationConstants.RESOURCE_NAME);
+    private static final String PASSKEY_NAME_PROMPT_KEY = "passkeyNamePrompt";
 
-    private final WebAuthnDeviceProfileManager webAuthnDeviceProfileManager = InjectorHolder.getInstance(
-            WebAuthnDeviceProfileManager.class);
+    private static final String PASSKEY_NAME_PROMPT = "Passkey name";
 
-    private final WebAuthnChallengeProvider challengeProvider = InjectorHolder.getInstance(
-            WebAuthnChallengeProvider.class);
+    private static final String PASSKEY_NAME_DEFAULT_KEY = "passkeyNameDefault";
 
-    private final WebAuthnResponseHandler webAuthnResponseHandler = new WebAuthnResponseHandler();
+    private static final String PASSKEY_NAME_DEFAULT = "Passkey";
 
-    private final WebAuthnConfigManager webAuthnConfigManager = new WebAuthnConfigManager();
+    private final WebAuthnRegistrationCeremony registrationCeremony;
 
-    private Map options;
+    private final WebAuthnClientResponseParser clientResponseParser;
 
-    private String username;
-
-    private String realm;
-
-    private AMIdentity user;
+    private final Clock clock;
 
     private PublicKeyCredentialCreationOptions publicKeyCredentialCreationOptions;
 
-    private WebAuthnDeviceSettings deviceSettings;
+    private WebAuthnDeviceSettings credentialRecord;
 
     private int maxAuthAgeMillis;
 
+    /**
+     * Create a WebAuthn registration module using configured Guice collaborators.
+     */
+    public WebAuthnRegistration() {
+        this(InjectorHolder.getInstance(WebAuthnRegistrationCeremony.class),
+                InjectorHolder.getInstance(WebAuthnClientResponseParser.class),
+                Clock.systemUTC());
+    }
+
+    WebAuthnRegistration(WebAuthnRegistrationCeremony registrationCeremony,
+            WebAuthnClientResponseParser clientResponseParser, Clock clock) {
+        Reject.ifNull(registrationCeremony, clientResponseParser, clock);
+        this.registrationCeremony = registrationCeremony;
+        this.clientResponseParser = clientResponseParser;
+        this.clock = clock;
+    }
+
+    /**
+     * Return the registration module resource name.
+     *
+     * @return registration module resource name
+     */
+    @Override
+    protected String resourceName() {
+        return RegistrationConstants.RESOURCE_NAME;
+    }
+
+    /**
+     * Initialise the WebAuthn registration module for one registration attempt.
+     *
+     * @param subject authenticated subject
+     * @param sharedState AM authentication shared state
+     * @param options module configuration options
+     */
     @Override
     public void init(Subject subject, Map sharedState, Map options) {
         this.options = options;
@@ -93,51 +112,74 @@ public class WebAuthnRegistration extends AMLoginModule {
         realm = DNMapper.orgNameToRealmName(getRequestOrg());
         user = IdUtils.getIdentity(username, realm);
         maxAuthAgeMillis = CollectionHelper.getIntMapAttr(
-                options, RegistrationConstants.MAX_AUTH_AGE, 300000, debug);
-        setAuthLevel(CollectionHelper.getIntMapAttr(options, RegistrationConstants.AUTHENTICATION_LEVEL, 0, debug));
+                options, RegistrationConstants.MAX_AUTH_AGE, 300000, debug());
+        setAuthLevel(CollectionHelper.getIntMapAttr(options, RegistrationConstants.AUTHENTICATION_LEVEL, 0, debug()));
     }
 
+    /**
+     * Drive the registration state machine.
+     *
+     * @param callbacks callbacks submitted for the current state
+     * @param state current AM authentication state
+     * @return next AM authentication state
+     * @throws LoginException if registration cannot continue
+     */
     @Override
     public int process(Callback[] callbacks, int state) throws LoginException {
         if (user == null) {
-            throw failure(WebAuthnFailureReason.NOT_ALLOWED, "Registration requires authenticated user", null);
+            throw failure(WebAuthnLoginFailureReason.NOT_ALLOWED, "Registration requires authenticated user", null);
         }
-        enforceRecentAuthentication();
+        if (state != RegistrationConstants.STATE_SHOW_RECOVERY_CODES) {
+            enforceRecentAuthentication();
+        }
 
         switch (state) {
-        case ISAuthConstants.LOGIN_START:
-            return startRegistration();
-        case RegistrationConstants.STATE_VALIDATE_SCRIPT_OUTPUT:
-            return validateScriptOutput(callbacks);
-        case RegistrationConstants.STATE_COMPLETE_REGISTRATION:
-            return completeRegistration(callbacks);
-        default:
-            throw failure(WebAuthnFailureReason.VERIFICATION_FAILED, null, null);
+            case ISAuthConstants.LOGIN_START:
+                return startRegistration();
+            case RegistrationConstants.STATE_VALIDATE_SCRIPT_OUTPUT:
+                return validateScriptOutput(callbacks);
+            case RegistrationConstants.STATE_COMPLETE_REGISTRATION:
+                return completeRegistration(callbacks);
+            case RegistrationConstants.STATE_SHOW_RECOVERY_CODES:
+                // The codes were revealed once on the previous screen; acknowledging simply finishes the chain.
+                return ISAuthConstants.LOGIN_SUCCEED;
+            default:
+                throw failure(WebAuthnLoginFailureReason.VERIFICATION_FAILED, null, null);
         }
     }
 
+    /**
+     * Return the registering WebAuthn principal.
+     *
+     * @return registering principal, or {@code null} before the user is known
+     */
     @Override
     public Principal getPrincipal() {
-        return new WebAuthnPrincipal(username);
+        return username == null ? null : new WebAuthnPrincipal(username);
     }
 
+    /**
+     * Clear module state at the end of the registration attempt.
+     */
     @Override
     public void destroyModuleState() {
         username = null;
         nullifyUsedVars();
     }
 
+    /**
+     * Clear callback-local state.
+     */
     @Override
     public void nullifyUsedVars() {
-        options = null;
-        realm = null;
-        user = null;
+        super.nullifyUsedVars();
         publicKeyCredentialCreationOptions = null;
-        deviceSettings = null;
+        credentialRecord = null;
     }
 
     private int startRegistration() throws AuthLoginException {
-        publicKeyCredentialCreationOptions = preparePublicKeyCredentialCreationOptions();
+        // WebAuthn Level 3 Section 7.1 step 1: build creation options for navigator.credentials.create().
+        publicKeyCredentialCreationOptions = buildCreationOptions();
         replaceScriptCallback(publicKeyCredentialCreationOptions);
         return RegistrationConstants.STATE_VALIDATE_SCRIPT_OUTPUT;
     }
@@ -147,24 +189,31 @@ public class WebAuthnRegistration extends AMLoginModule {
                 RegistrationConstants.VALIDATE_SCRIPT_OUTPUT_HIDDEN_VALUE_CALLBACK_INDEX]).getValue();
         boolean hasError = ((ConfirmationCallback) callbacks[
                 RegistrationConstants.VALIDATE_SCRIPT_OUTPUT_CONFIRMATION_CALLBACK_INDEX]).getSelectedIndex() == 1;
-        WebAuthnCallbackResultParser.Result callbackResult =
-                WebAuthnCallbackResultParser.parse(hiddenValueCallbackValue, hasError);
-        if (!callbackResult.isSuccess()) {
-            throw failure(callbackResult.getFailureReason(), callbackResult.getFailureMessage(), null);
-        }
-        final String origin = normalizeOrigin();
+        String credentialJson;
         try {
-            deviceSettings = webAuthnResponseHandler.handleRegistrationResponse(publicKeyCredentialCreationOptions,
-                    origin, callbackResult.getCredentialJson());
-        } catch (AuthLoginException e) {
-            throw failure(WebAuthnFailureReason.fromAuthErrorCode(e.getErrorCode()), e.getMessage(), e);
+            // Keep AM's hidden callback transport out of the WebAuthn ceremony. The ceremony receives only the
+            // credential JSON defined by the browser WebAuthn API; client-side failures remain JAAS module concerns.
+            credentialJson = clientResponseParser.getCredentialJson(hiddenValueCallbackValue, hasError);
+        } catch (WebAuthnClientResponseException e) {
+            throw failure(e.reason(), e.getMessage(), null);
         }
+        final String origin = normalizeOrigin(RegistrationConstants.RP_ORIGIN);
+        try {
+            credentialRecord = registrationCeremony.verify(
+                    publicKeyCredentialCreationOptions,
+                    origin,
+                    credentialJson);
+        } catch (WebAuthnCeremonyException e) {
+            throw failure(e);
+        }
+        preparePasskeyNameCallback();
         return RegistrationConstants.STATE_COMPLETE_REGISTRATION;
     }
 
     private int completeRegistration(Callback[] callbacks) throws AuthLoginException {
-        if (deviceSettings == null) {
-            throw failure(WebAuthnFailureReason.VERIFICATION_FAILED, "Registration device response missing", null);
+        if (credentialRecord == null) {
+            throw failure(WebAuthnLoginFailureReason.VERIFICATION_FAILED,
+                    "Registration credential record missing", null);
         }
         boolean renameRequested = ((ConfirmationCallback) callbacks[
                 RegistrationConstants.COMPLETE_REGISTRATION_CONFIRMATION_CALLBACK_INDEX]).getSelectedIndex() == 0;
@@ -172,86 +221,72 @@ public class WebAuthnRegistration extends AMLoginModule {
             String friendlyName = ((NameCallback) callbacks[
                     RegistrationConstants.COMPLETE_REGISTRATION_NAME_CALLBACK_INDEX]).getName();
             if (friendlyName != null && !friendlyName.isBlank()) {
-                deviceSettings.setDeviceName(friendlyName.trim());
+                try {
+                    credentialRecord.setDeviceName(WebAuthnDeviceSettings.validateDeviceName(friendlyName));
+                } catch (IllegalArgumentException e) {
+                    throw failure(WebAuthnLoginFailureReason.VERIFICATION_FAILED, e.getMessage(), e);
+                }
             }
         }
+        credentialRecord.setRpId(publicKeyCredentialCreationOptions.getRpId());
+        credentialRecord.setUserId(publicKeyCredentialCreationOptions.getUserId());
+        String[] recoveryCodes;
         try {
-            webAuthnDeviceProfileManager.saveDeviceProfile(username, realm, deviceSettings);
-        } catch (IOException e) {
-            throw failure(WebAuthnFailureReason.VERIFICATION_FAILED, "Failed to persist credential", e);
+            recoveryCodes = registrationCeremony.finalizeRegistration(username, realm, credentialRecord);
+        } catch (WebAuthnCeremonyException e) {
+            throw failure(e);
         }
-        return ISAuthConstants.LOGIN_SUCCEED;
+        // One-time reveal: surface the freshly generated plaintext codes to the user before completing.
+        presentRecoveryCodes(recoveryCodes);
+        return RegistrationConstants.STATE_SHOW_RECOVERY_CODES;
     }
 
-    private PublicKeyCredentialCreationOptions preparePublicKeyCredentialCreationOptions() throws AuthLoginException {
-        try {
-            final String displayNameAttr = webAuthnConfigManager.getUserDisplayNameAttribute(realm);
-            final String userIdAttr = webAuthnConfigManager.getUserIdAttribute(realm);
-            final String displayName;
-            final String userId;
-            userId = getAttributeValue(user, userIdAttr);
-            if (userId == null || userId.isBlank()) {
-                throw new AuthLoginException(RegistrationConstants.RESOURCE_NAME, "missingUserIdAttribute", null);
-            }
-            displayName = getAttributeValue(user, displayNameAttr);
-            String authenticatorAttachment = CollectionHelper.getMapAttr(options,
-                    RegistrationConstants.AUTHENTICATOR_ATTACHMENT);
-            return new PublicKeyCredentialCreationOptions.Builder()
-                    .attestation(CollectionHelper.getMapAttr(options, RegistrationConstants.ATTESTATION))
-                    .authenticatorAttachment(
-                            EMPTY_SELECTION.equals(authenticatorAttachment) ? null : authenticatorAttachment)
-                    .residentKey(CollectionHelper.getMapAttr(options, RegistrationConstants.RESIDENT_KEY))
-                    .userVerification(CollectionHelper.getMapAttr(options, RegistrationConstants.USER_VERIFICATION))
-                    .challenge(challengeProvider.generateChallenge())
-                    .excludeCredentials(webAuthnDeviceProfileManager.getDeviceProfiles(username, realm))
-                    .rpId(CollectionHelper.getMapAttr(options, RegistrationConstants.RP_ID))
-                    .rpName(CollectionHelper.getMapAttr(options, RegistrationConstants.RP_NAME))
-                    .timeout(CollectionHelper.getIntMapAttr(options, RegistrationConstants.TIMEOUT, 60000, debug))
-                    .userId(userId.getBytes(StandardCharsets.UTF_8))
-                    .userName(username)
-                    .displayName((displayName == null || displayName.isBlank()) ? username : displayName)
-                    .build();
-        } catch (AuthLoginException e) {
-            throw failure(WebAuthnFailureReason.fromAuthErrorCode(e.getErrorCode()), e.getMessage(), e);
-        } catch (SMSException e) {
-            throw failure(WebAuthnFailureReason.VERIFICATION_FAILED, "Failed reading WebAuthn service config", e);
-        } catch (IOException | IdRepoException | SSOException | IllegalArgumentException e) {
-            throw failure(WebAuthnFailureReason.VERIFICATION_FAILED, "Failed building registration options", e);
-        }
+    private void presentRecoveryCodes(String[] recoveryCodes) throws AuthLoginException {
+        String message = recoveryCodes == null ? "" : String.join("\n", recoveryCodes);
+        replaceCallback(
+                RegistrationConstants.STATE_SHOW_RECOVERY_CODES,
+                RegistrationConstants.SHOW_RECOVERY_CODES_TEXT_OUTPUT_CALLBACK_INDEX,
+                new TextOutputCallback(TextOutputCallback.INFORMATION, message));
     }
 
-    private ScriptTextOutputCallback prepareScriptCallback(
-            PublicKeyCredentialCreationOptions publicKeyCredentialCreationOptions) throws AuthLoginException {
-        String script;
+    private void preparePasskeyNameCallback() throws AuthLoginException {
+        String prompt = message(PASSKEY_NAME_PROMPT_KEY, PASSKEY_NAME_PROMPT);
+        String defaultName = message(PASSKEY_NAME_DEFAULT_KEY, PASSKEY_NAME_DEFAULT);
+        replaceCallback(RegistrationConstants.STATE_COMPLETE_REGISTRATION,
+                RegistrationConstants.COMPLETE_REGISTRATION_NAME_CALLBACK_INDEX,
+                new NameCallback(prompt, defaultName));
+    }
+
+    private PublicKeyCredentialCreationOptions buildCreationOptions() throws AuthLoginException {
+        String authenticatorAttachment = CollectionHelper.getMapAttr(options,
+                RegistrationConstants.AUTHENTICATOR_ATTACHMENT);
         try {
-            String scriptTemplate = IOUtils.readStream(getClass().getClassLoader()
-                    .getResourceAsStream(RegistrationConstants.CREDENTIALS_CREATE_SCRIPT_TEMPLATE_NAME));
-            String publicKey = publicKeyCredentialCreationOptions.toJson().toString();
-            String publicKeyEncoded = Base64.getUrlEncoder().withoutPadding()
-                    .encodeToString(publicKey.getBytes(StandardCharsets.UTF_8));
-            script = scriptTemplate.replace("{publicKeyB64}", publicKeyEncoded);
-        } catch (IOException e) {
-            throw new AuthLoginException(RegistrationConstants.RESOURCE_NAME, "failedPreparingScriptCallback", null, e);
+            return registrationCeremony.initiate(
+                    realm,
+                    username,
+                    CollectionHelper.getMapAttr(options, RegistrationConstants.RP_ID),
+                    CollectionHelper.getMapAttr(options, RegistrationConstants.RP_NAME),
+                    CollectionHelper.getIntMapAttr(options, RegistrationConstants.TIMEOUT, 60000, debug()),
+                    CollectionHelper.getMapAttr(options, RegistrationConstants.USER_VERIFICATION),
+                    EMPTY_SELECTION.equals(authenticatorAttachment) ? null : authenticatorAttachment,
+                    CollectionHelper.getMapAttr(options, RegistrationConstants.RESIDENT_KEY));
+        } catch (WebAuthnCeremonyException e) {
+            throw failure(e);
         }
-        return new ScriptTextOutputCallback(script);
     }
 
     private void replaceScriptCallback(PublicKeyCredentialCreationOptions options) throws AuthLoginException {
-        final ScriptTextOutputCallback scriptCallback = prepareScriptCallback(options);
-        replaceCallback(
+        String publicKeyJson;
+        try {
+            publicKeyJson = options.toJson().toString();
+        } catch (IOException e) {
+            throw new AuthLoginException(RegistrationConstants.RESOURCE_NAME, "failedPreparingScriptCallback", null, e);
+        }
+        replaceScriptCallback(
                 RegistrationConstants.STATE_VALIDATE_SCRIPT_OUTPUT,
                 RegistrationConstants.VALIDATE_SCRIPT_OUTPUT_SCRIPT_CALLBACK_INDEX,
-                scriptCallback);
-    }
-
-    private String normalizeOrigin() throws AuthLoginException {
-        try {
-            return webAuthnConfigManager.normalizeConfiguredOrigin(
-                    CollectionHelper.getMapAttr(options, RegistrationConstants.RP_ORIGIN),
-                    RegistrationConstants.RESOURCE_NAME);
-        } catch (AuthLoginException e) {
-            throw failure(WebAuthnFailureReason.fromAuthErrorCode(e.getErrorCode()), e.getMessage(), e);
-        }
+                RegistrationConstants.CREDENTIALS_CREATE_SCRIPT_TEMPLATE_NAME,
+                publicKeyJson);
     }
 
     private void enforceRecentAuthentication() throws AuthLoginException {
@@ -260,40 +295,16 @@ public class WebAuthnRegistration extends AMLoginModule {
         }
         String authInstant = getUserSessionProperty(ISAuthConstants.AUTH_INSTANT);
         if (authInstant == null || authInstant.isBlank()) {
-            throw failure(WebAuthnFailureReason.NOT_ALLOWED, "Recent authentication required", null);
+            throw failure(WebAuthnLoginFailureReason.NOT_ALLOWED, "Recent authentication required", null);
         }
         try {
-            long age = System.currentTimeMillis() - DateUtils.stringToDate(authInstant).getTime();
+            long age = clock.millis() - DateUtils.stringToDate(authInstant).getTime();
             if (age > maxAuthAgeMillis) {
-                throw failure(WebAuthnFailureReason.NOT_ALLOWED, "Recent authentication required", null);
+                throw failure(WebAuthnLoginFailureReason.NOT_ALLOWED, "Recent authentication required", null);
             }
         } catch (ParseException e) {
-            throw failure(WebAuthnFailureReason.NOT_ALLOWED, "Recent authentication required", e);
+            throw failure(WebAuthnLoginFailureReason.NOT_ALLOWED, "Recent authentication required", e);
         }
-    }
-
-    private AuthLoginException failure(WebAuthnFailureReason reason, String detail, Throwable cause) {
-        if (username != null) {
-            setFailureID(username);
-        }
-        StringBuilder logLine = new StringBuilder("WebAuthn registration failure; reason=").append(reason.name())
-                .append(", realm=").append(realm);
-        if (username != null && !username.isBlank()) {
-            logLine.append(", user=").append(username);
-        }
-        if (detail != null && !detail.isBlank()) {
-            logLine.append(", detail=").append(detail);
-        }
-        if (cause != null) {
-            debug.warning(logLine.toString(), cause);
-        } else {
-            debug.warning(logLine.toString());
-        }
-        return new AuthLoginException(
-                RegistrationConstants.RESOURCE_NAME,
-                reason.messageKey(),
-                null,
-                cause);
     }
 
 }

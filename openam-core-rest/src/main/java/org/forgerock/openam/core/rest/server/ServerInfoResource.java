@@ -12,6 +12,7 @@
  * information: "Portions copyright [year] [name of copyright owner]".
  *
  * Copyright 2013-2016 ForgeRock AS.
+ * Portions copyright 2026 Wren Security.
  */
 package org.forgerock.openam.core.rest.server;
 
@@ -178,6 +179,7 @@ public class ServerInfoResource extends RealmAwareResource {
             result.put("lang", getJsLocale(localeContext.getLocale()));
             result.put("successfulUserRegistrationDestination", selfServiceInfo.getUserRegistrationDestination());
             result.put("socialImplementations", getSocialAuthnImplementations(realm));
+            result.put("webAuthnAuthentication", getWebAuthnAuthenticationImplementation(realm));
             result.put("referralsEnabled", Boolean.FALSE.toString());
             result.put("zeroPageLogin", AuthUtils.getZeroPageLoginConfig(realm));
             result.put("realm", realm);
@@ -253,6 +255,11 @@ public class ServerInfoResource extends RealmAwareResource {
 
         return implementations;
 
+    }
+
+    private WebAuthnAuthenticationImplementation getWebAuthnAuthenticationImplementation(String realm) {
+        return new WebAuthnAuthenticationImplementationResolver(
+                AccessController.doPrivileged(AdminTokenAction.getInstance()), debug).resolve(realm);
     }
 
     private ServiceConfig getSocialAuthenticationServiceConfig(final String realm) throws SSOException, SMSException {

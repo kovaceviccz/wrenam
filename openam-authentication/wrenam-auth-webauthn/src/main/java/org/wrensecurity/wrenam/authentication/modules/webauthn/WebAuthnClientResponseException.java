@@ -11,21 +11,35 @@
  * Header, with the fields enclosed by brackets [] replaced by your own identifying
  * information: "Portions copyright [year] [name of copyright owner]".
  *
- * Copyright 2025 Wren Security. All rights reserved.
+ * Copyright 2026 Wren Security. All rights reserved.
  */
 package org.wrensecurity.wrenam.authentication.modules.webauthn;
 
 /**
- * Provider of WebAuthn
- * <a href="https://www.w3.org/TR/webauthn-3/#sctn-cryptographic-challenges">cryptographic challenges</a>.
+ * Represent a client-side WebAuthn response failure.
  */
-public interface WebAuthnChallengeProvider {
+public class WebAuthnClientResponseException extends Exception {
+
+    private final WebAuthnLoginFailureReason reason;
 
     /**
-     * Generate randomized cryptographic challenge.
+     * Create a client response failure.
      *
-     * @return at least 16 bytes long challenge
+     * @param reason login failure reason
+     * @param message safe client-side failure detail, or {@code null}
      */
-    byte[] generateChallenge();
+    public WebAuthnClientResponseException(WebAuthnLoginFailureReason reason, String message) {
+        super(message);
+        this.reason = reason == null ? WebAuthnLoginFailureReason.VERIFICATION_FAILED : reason;
+    }
+
+    /**
+     * Return the login failure reason.
+     *
+     * @return login failure reason
+     */
+    public WebAuthnLoginFailureReason reason() {
+        return reason;
+    }
 
 }

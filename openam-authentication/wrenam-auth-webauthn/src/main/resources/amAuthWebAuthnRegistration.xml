@@ -27,20 +27,6 @@
                 i18nKey="iPlanetAMAuthWebAuthnRegistrationServiceDescription">
             <Organization>
                 <AttributeSchema
-                        name="wrensec-am-auth-webauthnregistration-attestation"
-                        type="single_choice"
-                        syntax="string"
-                        resourceName="attestation"
-                        order="100"
-                        i18nKey="attestation">
-                    <ChoiceValues>
-                        <ChoiceValue i18nKey="none">none</ChoiceValue>
-                    </ChoiceValues>
-                    <DefaultValues>
-                        <Value>none</Value>
-                    </DefaultValues>
-                </AttributeSchema>
-                <AttributeSchema
                         name="wrensec-am-auth-webauthnregistration-authenticator-attachment"
                         type="single_choice"
                         syntax="string"
@@ -161,20 +147,6 @@
                     </DefaultValues>
                 </AttributeSchema>
                 <SubSchema name="serverconfig" inheritance="multiple" resourceName="USE-PARENT">
-                    <AttributeSchema
-                            name="wrensec-am-auth-webauthnregistration-attestation"
-                            type="single_choice"
-                            syntax="string"
-                            resourceName="attestation"
-                            order="100"
-                            i18nKey="attestation">
-                        <ChoiceValues>
-                            <ChoiceValue i18nKey="none">none</ChoiceValue>
-                        </ChoiceValues>
-                        <DefaultValues>
-                            <Value>none</Value>
-                        </DefaultValues>
-                    </AttributeSchema>
                     <AttributeSchema
                             name="wrensec-am-auth-webauthnregistration-authenticator-attachment"
                             type="single_choice"

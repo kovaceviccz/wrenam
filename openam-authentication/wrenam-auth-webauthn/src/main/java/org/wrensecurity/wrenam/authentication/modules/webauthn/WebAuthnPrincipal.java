@@ -11,7 +11,7 @@
  * Header, with the fields enclosed by brackets [] replaced by your own identifying
  * information: "Portions copyright [year] [name of copyright owner]".
  *
- * Copyright 2025 Wren Security. All rights reserved.
+ * Copyright 2026 Wren Security. All rights reserved.
  */
 package org.wrensecurity.wrenam.authentication.modules.webauthn;
 
@@ -19,12 +19,17 @@ import java.io.Serializable;
 import java.security.Principal;
 
 /**
- * WebAuthnPrincipal principal representation.
+ * Represent a WebAuthn-authenticated principal.
  */
 public class WebAuthnPrincipal implements Principal, Serializable {
 
     private final String name;
 
+    /**
+     * Create a WebAuthn principal.
+     *
+     * @param name principal name
+     */
     public WebAuthnPrincipal(String name) {
         if (name == null) {
             throw new IllegalArgumentException("Principal's name cannot be null");

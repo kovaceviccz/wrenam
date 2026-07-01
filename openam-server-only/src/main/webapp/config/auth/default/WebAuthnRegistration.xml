@@ -19,7 +19,7 @@
 <ModuleProperties moduleName="WebAuthnRegistration" version="1.0" >
     <Callbacks length="0" order="1" header="Authenticator setup">
     </Callbacks>
-    <Callbacks length="3" order="2" header="Use your authenticator to continue">
+    <Callbacks length="3" order="2" header="Create a passkey">
         <HiddenValueCallback>
             <Id>clientScriptOutputData</Id>
         </HiddenValueCallback>
@@ -35,17 +35,27 @@
             </OptionValues>
         </ConfirmationCallback>
     </Callbacks>
-    <Callbacks length="2" order="3" header="Rename authenticator">
+    <Callbacks length="2" order="3" header="Name your passkey">
         <NameCallback>
-            <Prompt>Authenticator name:</Prompt>
+            <Prompt>Passkey name</Prompt>
         </NameCallback>
         <ConfirmationCallback>
             <OptionValues>
                 <OptionValue>
-                    <Value>Rename</Value>
+                    <Value>Continue</Value>
                 </OptionValue>
                 <OptionValue>
                     <Value>Skip</Value>
+                </OptionValue>
+            </OptionValues>
+        </ConfirmationCallback>
+    </Callbacks>
+    <Callbacks length="2" order="4" header="Save your recovery codes">
+        <TextOutputCallback messageType="information">PLACEHOLDER</TextOutputCallback>
+        <ConfirmationCallback>
+            <OptionValues>
+                <OptionValue>
+                    <Value>I have saved my recovery codes</Value>
                 </OptionValue>
             </OptionValues>
         </ConfirmationCallback>

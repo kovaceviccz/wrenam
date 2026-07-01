@@ -22,6 +22,10 @@
 
             {{> login/_SelfService }}
 
+            {{#if showPasskeyLogin}}
+                {{> login/_PasskeyAuthn }}
+            {{/if}}
+
             {{#if showSocialLogin}}
                 {{> login/_SocialAuthn }}
             {{/if}}

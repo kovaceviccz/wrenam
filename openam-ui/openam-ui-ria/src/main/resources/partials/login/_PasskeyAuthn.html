@@ -1,0 +1,10 @@
+<div class="form-group">
+    <div class="login-separator" role="separator" aria-label="{{t 'common.form.or'}}">
+        <span>{{t "common.form.or"}}</span>
+    </div>
+    <a href="?service={{webAuthnAuthentication.authnChain}}{{gotoParameter}}{{intendedRealmParameter}}{{urlTo 'login'}}"
+       class="btn btn-lg btn-block btn-primary btn-uppercase"
+       data-passkey-login>
+        {{t "templates.user.LoginTemplate.logInWithPasskeyButton"}}
+    </a>
+</div>

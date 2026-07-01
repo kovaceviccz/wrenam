@@ -1,0 +1,25 @@
+<div class="container">
+    <form action="" method="post" class="form login col-sm-6 col-sm-offset-3 text-center" autocomplete="off" data-stage="{{reqs.stage}}">
+        <fieldset class="row">
+            {{! WebAuthn authentication stage 5: post-recovery acknowledgement. The recovery
+                code has already been consumed; continue completes the authentication chain. }}
+            <div class="page-header">
+                <h1 class="text-center">{{t "templates.user.LoginTemplate.passkeyRecoveryUsedTitle"}}</h1>
+            </div>
+            <p class="text-muted passkey-prompt-help">{{t "templates.user.LoginTemplate.passkeyRecoveryUsedHelp"}}</p>
+
+            {{#each reqs.callbacks}}
+            {{#equals type "ConfirmationCallback"}}
+            {{! Single acknowledgement action; there is no retry path here because the code was valid. }}
+            <input id="button_0"
+                   name="callback_{{input.index}}"
+                   type="submit"
+                   role="button"
+                   index="0"
+                   value="{{t 'common.form.continue'}}"
+                   class="btn btn-lg btn-block btn-primary btn-uppercase">
+            {{/equals}}
+            {{/each}}
+        </fieldset>
+    </form>
+</div>

@@ -26,12 +26,6 @@ public final class RegistrationConstants {
     static final String RESOURCE_NAME = "amAuthWebAuthnRegistration";
 
     /**
-     * Module configuration key that specifies the relying party's preference
-     * for how attestation statements are conveyed during credential creation.
-     */
-    static final String ATTESTATION = "wrensec-am-auth-webauthnregistration-attestation";
-
-    /**
      * Module configuration key that indicates which authenticator attachment
      * type should be permitted for the chosen authenticator.
      */
@@ -90,6 +84,8 @@ public final class RegistrationConstants {
 
     static final int STATE_COMPLETE_REGISTRATION = 3;
 
+    static final int STATE_SHOW_RECOVERY_CODES = 4;
+
     static final int VALIDATE_SCRIPT_OUTPUT_HIDDEN_VALUE_CALLBACK_INDEX = 0;
 
     static final int VALIDATE_SCRIPT_OUTPUT_SCRIPT_CALLBACK_INDEX = 1;
@@ -99,5 +95,9 @@ public final class RegistrationConstants {
     static final int COMPLETE_REGISTRATION_NAME_CALLBACK_INDEX = 0;
 
     static final int COMPLETE_REGISTRATION_CONFIRMATION_CALLBACK_INDEX = 1;
+
+    static final int SHOW_RECOVERY_CODES_TEXT_OUTPUT_CALLBACK_INDEX = 0;
+
+    static final int SHOW_RECOVERY_CODES_CONFIRMATION_CALLBACK_INDEX = 1;
 
 }

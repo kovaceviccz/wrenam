@@ -61,8 +61,12 @@ define([
         this.data.showForgotten = this.data.showForgotPassword || this.data.showForgotUserName;
         this.data.showSelfRegistration = firstUserNamePassStage && Configuration.globalData.selfRegistration === "true";
         this.data.showRememberLogin = firstUserNamePassStage;
-        // socialImplementations links should be shown only on the first stage of the username/password stages
+        // passkey and social sign-in links should be shown only on the first stage of the username/password stages
         // and should not show on the upgrade session page
+        this.data.showPasskeyLogin = firstUserNamePassStage && !Configuration.loggedUser &&
+                                        Boolean(window.PublicKeyCredential) &&
+                                        _.get(Configuration.globalData, "webAuthnAuthentication.enabled") &&
+                                        _.get(Configuration.globalData, "webAuthnAuthentication.authnChain");
         this.data.showSocialLogin = firstUserNamePassStage && !Configuration.loggedUser &&
                                         !_.isEmpty(Configuration.globalData.socialImplementations);
 

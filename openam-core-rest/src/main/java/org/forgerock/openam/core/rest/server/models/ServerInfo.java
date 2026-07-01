@@ -12,6 +12,7 @@
  * information: "Portions copyright [year] [name of copyright owner]".
  *
  * Copyright 2016 ForgeRock AS.
+ * Portions copyright 2026 Wren Security.
  */
 package org.forgerock.openam.core.rest.server.models;
 
@@ -24,6 +25,7 @@ import java.util.Set;
 import org.forgerock.api.annotations.Description;
 import org.forgerock.api.annotations.Title;
 import org.forgerock.openam.core.rest.server.SocialAuthenticationImplementation;
+import org.forgerock.openam.core.rest.server.WebAuthnAuthenticationImplementation;
 
 import com.sun.identity.authentication.client.ZeroPageLoginConfig;
 
@@ -77,6 +79,10 @@ public class ServerInfo {
     @Title(SERVER_INFO_RESOURCE + "serverinfo.socialImplementations.title")
     @Description(SERVER_INFO_RESOURCE + "serverinfo.socialImplementations.description")
     public List<SocialAuthenticationImplementation> socialImplementations;
+
+    @Title(SERVER_INFO_RESOURCE + "serverinfo.webAuthnAuthentication.title")
+    @Description(SERVER_INFO_RESOURCE + "serverinfo.webAuthnAuthentication.description")
+    public WebAuthnAuthenticationImplementation webAuthnAuthentication;
 
     @Title(SERVER_INFO_RESOURCE + "serverinfo.referralsEnabled.title")
     @Description(SERVER_INFO_RESOURCE + "serverinfo.referralsEnabled.description")

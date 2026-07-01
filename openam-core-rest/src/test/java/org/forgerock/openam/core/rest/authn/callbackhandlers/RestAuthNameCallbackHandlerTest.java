@@ -147,6 +147,35 @@ public class RestAuthNameCallbackHandlerTest {
     }
 
     @Test
+    public void shouldConvertDefaultNameToJsonWhenNameIsNotSet() throws RestAuthException {
+
+        //Given
+        NameCallback nameCallback = new NameCallback("Enter device name:", "Passkey");
+
+        //When
+        JsonValue jsonObject = restAuthNameCallbackHandler.convertToJson(nameCallback, 1);
+
+        //Then
+        assertThat(jsonObject).hasArray("input").hasSize(1);
+        assertThat(jsonObject.get("input").get(0)).stringAt("value").isEqualTo("Passkey");
+    }
+
+    @Test
+    public void shouldPreferSubmittedNameOverDefaultName() throws RestAuthException {
+
+        //Given
+        NameCallback nameCallback = new NameCallback("Enter device name:", "Passkey");
+        nameCallback.setName("Demo passkey");
+
+        //When
+        JsonValue jsonObject = restAuthNameCallbackHandler.convertToJson(nameCallback, 1);
+
+        //Then
+        assertThat(jsonObject).hasArray("input").hasSize(1);
+        assertThat(jsonObject.get("input").get(0)).stringAt("value").isEqualTo("Demo passkey");
+    }
+
+    @Test
     public void shouldConvertFromJson() throws RestAuthException {
 
         //Given

@@ -1,45 +1,74 @@
 <div class="container">
-    {{#if reqs.header}}
-    <div class="page-header">
-        <h1 class="text-center">{{reqs.header}}</h1>
-    </div>
-    {{/if}}
-    <form action="" method="post" class="form col-sm-6 col-sm-offset-3 text-center" autocomplete="off" data-stage="{{reqs.stage}}">
+    <form action="" method="post" class="form login col-sm-6 col-sm-offset-3" autocomplete="off" data-stage="{{reqs.stage}}">
         <fieldset class="row">
+            {{! WebAuthn registration stage 2: run navigator.credentials.create() in the browser.
+                HiddenValueCallback carries the credential response JSON back to Java; TextOutputCallback
+                renders the generated browser script and should stay out of the visible layout. }}
             {{#each reqs.callbacks}}
             {{#equals type "HiddenValueCallback"}}
-            <div class="form-group">
-                {{callbackRender}}
-            </div>
+            <div class="hidden">{{callbackRender}}</div>
             {{/equals}}
-
             {{#equals type "TextOutputCallback"}}
-            <div class="form-group">
-                {{callbackRender}}
-            </div>
+            <div class="hidden">{{callbackRender}}</div>
             {{/equals}}
             {{/each}}
 
-            <div class="panel panel-default">
-                <div class="panel-body text-center">
-                    <h4 class="awaiting-response"><i class="fa fa-circle-o-notch fa-spin text-primary"></i> {{t "templates.user.LoginTemplate.waitingForResponse"}}</h4>
+            {{! Shared passkey status surface. XUI owns the localized strings below; the WebAuthn
+                browser script is only the controller that maps stable browser failure codes to this
+                native Wren:AM presentation. }}
+            <div id="passkey-authn-panel"
+                 class="passkey-prompt"
+                 data-passkey-state="waiting"
+                 data-passkey-default-title="{{reqs.header}}"
+                 data-passkey-default-help="{{t 'templates.user.LoginTemplate.approvePasskeySetup'}}"
+                 data-passkey-success-title="{{t 'templates.user.LoginTemplate.passkeySetupSuccessTitle'}}"
+                 data-passkey-success-help="{{t 'templates.user.LoginTemplate.passkeySetupSuccessHelp'}}"
+                 data-passkey-error-title="{{t 'templates.user.LoginTemplate.passkeySetupFailedTitle'}}"
+                 data-passkey-error-help="{{t 'templates.user.LoginTemplate.passkeySetupFailedHelp'}}"
+                 data-passkey-already-registered-help="{{t 'templates.user.LoginTemplate.passkeySetupAlreadyRegistered'}}">
+                <div class="passkey-status" role="status" aria-live="polite">
+                    <div class="page-header">
+                        <h1 class="text-center" data-passkey-heading>
+                            <span data-passkey-heading-text>{{reqs.header}}</span>
+                        </h1>
+                    </div>
+                    <p class="text-muted text-center passkey-prompt-help" data-passkey-help>
+                        {{t "templates.user.LoginTemplate.approvePasskeySetup"}}
+                    </p>
+                    <div class="panel panel-default passkey-waiting-panel" data-passkey-waiting>
+                        <div class="panel-body text-center">
+                            <h4 class="awaiting-response">
+                                <i class="fa fa-circle-o-notch fa-spin text-primary" aria-hidden="true"></i>
+                                {{t "templates.user.LoginTemplate.waitingForResponse"}}
+                            </h4>
+                        </div>
+                    </div>
                 </div>
+                <button type="button"
+                        class="btn btn-lg btn-block btn-primary btn-uppercase hidden"
+                        data-passkey-try-again>
+                    {{t "templates.user.LoginTemplate.passkeyTryAgain"}}
+                </button>
             </div>
 
             {{#each reqs.callbacks}}
             {{#equals type "ConfirmationCallback"}}
-            <div class="form-group">
-                <input id="button_1"
-                       name="callback_2"
-                       type="submit"
-                       role="button"
-                       style="display: none;"
-                       index="0">
+            {{! Hidden success submit. It stays outside data-passkey-secondary-actions so the browser
+                script can hide/disable the visible cancel path before submitting a successful result. }}
+            <input id="button_1"
+                   name="callback_2"
+                   type="submit"
+                   role="button"
+                   style="display: none;"
+                   index="0">
+            {{! Visible cancel action while setup is pending or recoverably failed. The browser
+                script owns availability; CSS only spaces this block below the hero. }}
+            <div class="form-group passkey-secondary-actions" data-passkey-secondary-actions>
                 {{#each output}}
                 {{#equals name "options"}}
                 <input id="button_2"
                        name="callback_2"
-                       class="btn btn-default btn-uppercase"
+                       class="btn btn-lg btn-block btn-default btn-uppercase"
                        type="submit"
                        role="button"
                        value="{{this.value.[1]}}"
