@@ -12,10 +12,12 @@
  * information: "Portions copyright [year] [name of copyright owner]".
  *
  * Copyright 2015 ForgeRock AS.
+ * Portions copyright 2026 Wren Security.
  */
 package org.forgerock.openam.ldap;
 
 import org.forgerock.json.JsonPointer;
+import org.forgerock.json.resource.ResourceResponse;
 import org.forgerock.openam.utils.StringUtils;
 import org.forgerock.opendj.ldap.Filter;
 import org.forgerock.util.query.QueryFilter;
@@ -30,6 +32,16 @@ import java.util.List;
  * compatible query.  This is based on James's {@link org.forgerock.openam.sm.datalayer.impl.ldap.LdapQueryFilterVisitor}.
  */
 public class LdapFromJsonQueryFilterVisitor implements QueryFilterVisitor<Filter, Void, JsonPointer> {
+
+    private final String searchAttribute;
+
+    public LdapFromJsonQueryFilterVisitor() {
+        this(null);
+    }
+
+    public LdapFromJsonQueryFilterVisitor(String searchAttribute) {
+        this.searchAttribute = searchAttribute;
+    }
 
     @Override
     public Filter visitAndFilter(Void aVoid, List<QueryFilter<JsonPointer>> subQueryFilters) {
@@ -110,7 +122,11 @@ public class LdapFromJsonQueryFilterVisitor implements QueryFilterVisitor<Filter
         }
         String name = field.toString();
         if (name.startsWith("/")) {
-            return name.substring(1);
+            name = name.substring(1);
+        }
+        // Map CREST's virtual resource ID to the repository's configured search attribute
+        if (ResourceResponse.FIELD_CONTENT_ID.equals(name) && searchAttribute != null) {
+            return searchAttribute;
         }
         return name;
     }

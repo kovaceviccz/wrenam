@@ -13,7 +13,7 @@
  *
  * Copyright 2013-2016 ForgeRock AS.
  * Portions Copyright 2016 Nomura Research Institute, Ltd.
- * Portions Copyright 2025 Wren Security.
+ * Portions Copyright 2025-2026 Wren Security.
  */
 package org.forgerock.openam.idrepo.ldap;
 
@@ -1150,7 +1150,7 @@ public class DJLDAPv3Repo extends IdRepo implements IdentityMovedOrRenamedListen
         if (crestQuery.hasQueryId()) {
             first = Filter.valueOf(searchAttr + "=" + partiallyEscapeAssertionValue(crestQuery.getQueryId()));
         } else {
-            first = crestQuery.getQueryFilter().accept(new LdapFromJsonQueryFilterVisitor(), null);
+            first = crestQuery.getQueryFilter().accept(new LdapFromJsonQueryFilterVisitor(searchAttr), null);
         }
 
         Filter filter = Filter.and(first, getObjectClassFilter(type));
