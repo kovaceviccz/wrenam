@@ -48,6 +48,7 @@ import org.forgerock.openam.core.rest.identity.IdentityResourceV1;
 import org.forgerock.openam.core.rest.identity.IdentityResourceV2;
 import org.forgerock.openam.core.rest.identity.IdentityResourceV3;
 import org.forgerock.openam.core.rest.identity.IdentityResourceV4;
+import org.forgerock.openam.core.rest.identity.UserGroupsResourceV1;
 import org.forgerock.openam.core.rest.record.RecordConstants;
 import org.forgerock.openam.core.rest.record.RecordResource;
 import org.forgerock.openam.core.rest.server.ServerInfoResource;
@@ -121,6 +122,12 @@ public class CoreRestRouteProvider extends AbstractRestRouteProvider {
                 .auditAs(GROUPS)
                 .forVersion(1, 0)
                 .toSingleton(Key.get(AllAuthenticatedUsersResourceV1.class));
+
+        realmRouter.route("users/{user}/groups")
+                .auditAs(GROUPS)
+                .authorizeWith(CrestPrivilegeAuthzModule.class)
+                .forVersion(1, 0)
+                .toAnnotatedCollection(UserGroupsResourceV1.class);
 
         realmRouter.route("agents")
                 .auditAs(POLICY_AGENT)

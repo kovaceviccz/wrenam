@@ -1,0 +1,19 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "i18n:api-descriptor/UserGroupsResourceV1#schema.title",
+  "description": "i18n:api-descriptor/UserGroupsResourceV1#schema.description",
+  "type": "object",
+  "properties": {
+    "groups": {
+      "type": "array",
+      "title": "i18n:api-descriptor/UserGroupsResourceV1#schema.groups.title",
+      "description": "i18n:api-descriptor/UserGroupsResourceV1#schema.groups.description",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "required": [
+    "groups"
+  ]
+}
