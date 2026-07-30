@@ -114,6 +114,8 @@ public class ForgerockRestGuiceModule extends AbstractModule {
                 PrivilegeDefinition.getInstance("clone", PrivilegeDefinition.Action.MODIFY));
         definitions.put("updateMemberships",
                 PrivilegeDefinition.getInstance("updateMemberships", PrivilegeDefinition.Action.MODIFY));
+        definitions.put("unassignServices",
+                PrivilegeDefinition.getInstance("unassignServices", PrivilegeDefinition.Action.MODIFY));
 
         return definitions;
     }

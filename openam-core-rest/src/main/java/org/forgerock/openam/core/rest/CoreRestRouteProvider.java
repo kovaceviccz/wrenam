@@ -56,6 +56,8 @@ import org.forgerock.openam.core.rest.server.ServerVersionResource;
 import org.forgerock.openam.core.rest.session.AnyOfAuthzModule;
 import org.forgerock.openam.core.rest.session.SessionResource;
 import org.forgerock.openam.core.rest.session.SessionResourceV2;
+import org.forgerock.openam.core.rest.sms.UserServiceResource;
+import org.forgerock.openam.core.rest.sms.UserServicesResource;
 import org.forgerock.openam.http.authz.HttpContextFilter;
 import org.forgerock.openam.http.authz.HttpPrivilegeAuthzModule;
 import org.forgerock.openam.rest.AbstractRestRouteProvider;
@@ -128,6 +130,18 @@ public class CoreRestRouteProvider extends AbstractRestRouteProvider {
                 .authorizeWith(CrestPrivilegeAuthzModule.class)
                 .forVersion(1, 0)
                 .toAnnotatedCollection(UserGroupsResourceV1.class);
+
+        realmRouter.route("users/{user}/services")
+                .auditAs(USERS)
+                .authorizeWith(CrestPrivilegeAuthzModule.class)
+                .forVersion(1, 0)
+                .toAnnotatedSingleton(UserServicesResource.class);
+
+        realmRouter.route("users/{user}/services/{service}")
+                .auditAs(USERS)
+                .authorizeWith(CrestPrivilegeAuthzModule.class)
+                .forVersion(1, 0)
+                .toAnnotatedSingleton(UserServiceResource.class);
 
         realmRouter.route("agents")
                 .auditAs(POLICY_AGENT)
