@@ -1,0 +1,141 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "i18n:api-descriptor/IdentityResourceV4#users.schema.title",
+  "description": "i18n:api-descriptor/IdentityResourceV4#users.schema.description",
+  "type": "object",
+  "properties": {
+    "givenName": {
+      "title": "i18n:api-descriptor/IdentityResourceV4#users.schema.givenName.title",
+      "description": "i18n:api-descriptor/IdentityResourceV4#users.schema.givenName.description",
+      "type": "string",
+      "required": false,
+      "propertyOrder": 100
+    },
+    "sn": {
+      "title": "i18n:api-descriptor/IdentityResourceV4#users.schema.sn.title",
+      "description": "i18n:api-descriptor/IdentityResourceV4#users.schema.sn.description",
+      "type": "string",
+      "required": true,
+      "minLength": 1,
+      "propertyOrder": 200
+    },
+    "cn": {
+      "title": "i18n:api-descriptor/IdentityResourceV4#users.schema.cn.title",
+      "description": "i18n:api-descriptor/IdentityResourceV4#users.schema.cn.description",
+      "type": "string",
+      "required": true,
+      "minLength": 1,
+      "propertyOrder": 300
+    },
+    "userPassword": {
+      "title": "i18n:api-descriptor/IdentityResourceV4#users.schema.userPassword.title",
+      "description": "i18n:api-descriptor/IdentityResourceV4#users.schema.userPassword.description",
+      "type": "string",
+      "format": "password",
+      "required": true,
+      "minLength": 1,
+      "propertyOrder": 400
+    },
+    "mail": {
+      "title": "i18n:api-descriptor/IdentityResourceV4#users.schema.mail.title",
+      "description": "i18n:api-descriptor/IdentityResourceV4#users.schema.mail.description",
+      "type": "string",
+      "format": "email",
+      "required": false,
+      "propertyOrder": 500
+    },
+    "employeeNumber": {
+      "title": "i18n:api-descriptor/IdentityResourceV4#users.schema.employeeNumber.title",
+      "description": "i18n:api-descriptor/IdentityResourceV4#users.schema.employeeNumber.description",
+      "type": "string",
+      "required": false,
+      "propertyOrder": 600
+    },
+    "telephoneNumber": {
+      "title": "i18n:api-descriptor/IdentityResourceV4#users.schema.telephoneNumber.title",
+      "description": "i18n:api-descriptor/IdentityResourceV4#users.schema.telephoneNumber.description",
+      "type": "string",
+      "required": false,
+      "propertyOrder": 700
+    },
+    "postalAddress": {
+      "title": "i18n:api-descriptor/IdentityResourceV4#users.schema.postalAddress.title",
+      "description": "i18n:api-descriptor/IdentityResourceV4#users.schema.postalAddress.description",
+      "type": "string",
+      "required": false,
+      "propertyOrder": 800
+    },
+    "inetUserStatus": {
+      "title": "i18n:api-descriptor/IdentityResourceV4#users.schema.inetUserStatus.title",
+      "description": "i18n:api-descriptor/IdentityResourceV4#users.schema.inetUserStatus.description",
+      "type": "string",
+      "enum": [
+        "Active",
+        "Inactive"
+      ],
+      "options": {
+        "enum_titles": [
+          "i18n:api-descriptor/IdentityResourceV4#users.schema.inetUserStatus.active",
+          "i18n:api-descriptor/IdentityResourceV4#users.schema.inetUserStatus.inactive"
+        ]
+      },
+      "required": true,
+      "propertyOrder": 900
+    },
+    "iplanet-am-user-account-life": {
+      "title": "i18n:api-descriptor/IdentityResourceV4#users.schema.accountLife.title",
+      "description": "i18n:api-descriptor/IdentityResourceV4#users.schema.accountLife.description",
+      "type": "string",
+      "pattern": "^(?:\\d{4}/\\d{2}/\\d{2} \\d{2}:\\d{2}:\\d{2})?$",
+      "required": false,
+      "propertyOrder": 1000
+    },
+    "iplanet-am-user-auth-config": {
+      "title": "i18n:api-descriptor/IdentityResourceV4#users.schema.authConfig.title",
+      "description": "i18n:api-descriptor/IdentityResourceV4#users.schema.authConfig.description",
+      "type": "string",
+      "required": false,
+      "propertyOrder": 1100
+    },
+    "iplanet-am-user-alias-list": {
+      "title": "i18n:api-descriptor/IdentityResourceV4#users.schema.aliases.title",
+      "description": "i18n:api-descriptor/IdentityResourceV4#users.schema.aliases.description",
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "required": false,
+      "propertyOrder": 1200
+    },
+    "iplanet-am-user-success-url": {
+      "title": "i18n:api-descriptor/IdentityResourceV4#users.schema.successUrls.title",
+      "description": "i18n:api-descriptor/IdentityResourceV4#users.schema.successUrls.description",
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "required": false,
+      "propertyOrder": 1300
+    },
+    "iplanet-am-user-failure-url": {
+      "title": "i18n:api-descriptor/IdentityResourceV4#users.schema.failureUrls.title",
+      "description": "i18n:api-descriptor/IdentityResourceV4#users.schema.failureUrls.description",
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "required": false,
+      "propertyOrder": 1400
+    },
+    "sunIdentityMSISDNNumber": {
+      "title": "i18n:api-descriptor/IdentityResourceV4#users.schema.msisdn.title",
+      "description": "i18n:api-descriptor/IdentityResourceV4#users.schema.msisdn.description",
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "required": false,
+      "propertyOrder": 1500
+    }
+  }
+}

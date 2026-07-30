@@ -12,7 +12,7 @@
  * information: "Portions copyright [year] [name of copyright owner]".
  *
  * Copyright 2015-2016 ForgeRock AS.
- * Portions copyright 2025 Wren Security
+ * Portions copyright 2025-2026 Wren Security
  */
 package org.forgerock.openam.core.rest;
 
@@ -102,6 +102,8 @@ public class CoreRestRouteProvider extends AbstractRestRouteProvider {
                 .forVersion(3, 0)
                 .toCollection(Key.get(IdentityResourceV3.class, Names.named("UsersResource")))
                 .forVersion(4, 0)
+                .toCollection(Key.get(IdentityResourceV4.class, Names.named("UsersResource")))
+                .forVersion(4, 1)
                 .toCollection(Key.get(IdentityResourceV4.class, Names.named("UsersResource")));
 
         realmRouter.route("groups")

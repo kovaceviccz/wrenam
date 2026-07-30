@@ -11,7 +11,7 @@
  * Header, with the fields enclosed by brackets [] replaced by your own identifying
  * information: "Portions copyright [year] [name of copyright owner]".
  *
- * Copyright 2025-2026 Wren Security
+ * Copyright 2025-2026 Wren Security.
  */
 package org.forgerock.openam.core.rest.identity;
 
@@ -22,6 +22,8 @@ import static org.forgerock.openam.rest.RestUtils.isContractConformantUserProvid
 import static org.forgerock.util.promise.Promises.newResultPromise;
 
 import com.iplanet.sso.SSOToken;
+import com.sun.identity.authentication.service.ConfiguredAuthServices;
+import com.sun.identity.authentication.util.ISAuthConstants;
 import com.sun.identity.idsvcs.AccessDenied;
 import com.sun.identity.idsvcs.GeneralFailure;
 import com.sun.identity.idsvcs.IdentityDetails;
@@ -30,10 +32,22 @@ import com.sun.identity.idsvcs.ObjectNotFound;
 import com.sun.identity.idsvcs.TokenExpired;
 import com.sun.identity.idsvcs.opensso.GeneralAccessDeniedError;
 import com.sun.identity.idsvcs.opensso.IdentityServicesImpl;
+import com.sun.identity.shared.Constants;
 import com.sun.identity.shared.debug.Debug;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+import java.time.format.ResolverStyle;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeMap;
+import java.util.regex.Pattern;
 import org.forgerock.api.models.Schema;
+import org.forgerock.http.routing.ApiVersionRouterContext;
+import org.forgerock.http.routing.Version;
 import org.forgerock.json.JsonPointer;
 import org.forgerock.json.JsonValue;
 import org.forgerock.json.resource.ActionRequest;
@@ -62,6 +76,7 @@ import org.forgerock.openam.rest.DescriptorUtils;
 import org.forgerock.openam.rest.RestConstants;
 import org.forgerock.openam.rest.query.QueryResponsePresentation;
 import org.forgerock.openam.utils.CrestQuery;
+import org.forgerock.openam.utils.JsonValueBuilder;
 import org.forgerock.services.context.Context;
 import org.forgerock.util.promise.Promise;
 import org.forgerock.util.query.QueryFilter;
@@ -70,6 +85,14 @@ import org.forgerock.util.query.QueryFilter;
  * <code>IdentityServicesImpl</code> REST provider.
  */
 public class IdentityResourceV4 implements CollectionResourceProvider {
+
+    private static final Pattern ACCOUNT_LIFE_PATTERN =
+            Pattern.compile("\\d{4}/\\d{2}/\\d{2} \\d{2}:\\d{2}:\\d{2}");
+
+    private static final DateTimeFormatter ACCOUNT_LIFE_FORMAT =
+            DateTimeFormatter.ofPattern("uuuu/MM/dd HH:mm:ss").withResolverStyle(ResolverStyle.STRICT);
+
+    private static final Version USER_FORM_RESOURCE_VERSION = Version.version(4, 1);
 
     private final Debug debug = Debug.getInstance("frRest");
 
@@ -83,14 +106,32 @@ public class IdentityResourceV4 implements CollectionResourceProvider {
 
     private final Schema resourceSchema;
 
+    private final Schema userFormSchema;
+
+    private final JsonValue resourceTemplate;
+
+    private final ConfiguredAuthServices configuredAuthServices;
+
     public IdentityResourceV4(String objectType, IdentityServicesImpl identityServices,
             IdentityRestMapper identityMapper, IdentityResourceV3 identityResourceV3) {
+        this(objectType, identityServices, identityMapper, identityResourceV3, new ConfiguredAuthServices());
+    }
+
+    IdentityResourceV4(String objectType, IdentityServicesImpl identityServices,
+            IdentityRestMapper identityMapper, IdentityResourceV3 identityResourceV3,
+            ConfiguredAuthServices configuredAuthServices) {
         this.objectType = objectType;
         this.identityServices = identityServices;
         this.identityMapper = identityMapper;
         this.identityResourceV3 = identityResourceV3;
         this.resourceSchema = DescriptorUtils.fromResource(
                 "IdentityResourceV4." + objectType + ".schema.json", getClass());
+        boolean userResource = IdentityRestUtils.USER_TYPE.equals(objectType);
+        this.userFormSchema = userResource
+                ? DescriptorUtils.fromResource("IdentityResourceV4.user.form.schema.json", getClass()) : null;
+        this.resourceTemplate = userResource
+                ? JsonValueBuilder.fromResource(getClass(), "IdentityResourceV4.user.template.json") : null;
+        this.configuredAuthServices = configuredAuthServices;
     }
 
     @Override
@@ -98,11 +139,16 @@ public class IdentityResourceV4 implements CollectionResourceProvider {
         if (RestConstants.SCHEMA.equals(request.getAction())) {
             return newResultPromise(newActionResponse(getSchema(context)));
         }
+        if (RestConstants.TEMPLATE.equals(request.getAction()) && isUserFormRequest(context)) {
+            return newResultPromise(newActionResponse(resourceTemplate.copy()));
+        }
         return identityResourceV3.actionCollection(context, request);
     }
 
     private JsonValue getSchema(Context context) {
-        JsonValue schema = resourceSchema.getSchema().copy();
+        boolean userFormRequest = isUserFormRequest(context);
+        JsonValue schema = userFormRequest
+                ? userFormSchema.getSchema().copy() : resourceSchema.getSchema().copy();
 
         if (IdentityRestUtils.GROUP_TYPE.equals(objectType)) {
             String realmName = ServerContextUtils.getRealm(context);
@@ -110,9 +156,92 @@ public class IdentityResourceV4 implements CollectionResourceProvider {
 
             schema.putPermissive(ptr("properties", DelegationRestUtils.PRIVILEGES_PROP),
                     DelegationRestUtils.getPrivilegesSchema(realmName, ssoToken));
+        } else if (userFormRequest) {
+            Map<String, String> configurations = getAuthenticationConfigurations(context);
+            schema.putPermissive(ptr("properties", ISAuthConstants.AUTHCONFIG_USER, "enum"),
+                    new ArrayList<>(configurations.keySet()));
+            schema.putPermissive(ptr("properties", ISAuthConstants.AUTHCONFIG_USER, "options", "enum_titles"),
+                    new ArrayList<>(configurations.values()));
         }
 
         return schema;
+    }
+
+    private boolean isUserFormRequest(Context context) {
+        if (!IdentityRestUtils.USER_TYPE.equals(objectType)) {
+            return false;
+        }
+        try {
+            Version version = context.asContext(ApiVersionRouterContext.class).getResourceVersion();
+            return version != null && version.compareTo(USER_FORM_RESOURCE_VERSION) >= 0;
+        } catch (IllegalArgumentException e) {
+            return false;
+        }
+    }
+
+    private Map<String, String> getAuthenticationConfigurations(Context context) {
+        Map<String, Object> environment = new HashMap<>();
+        environment.put(Constants.ORGANIZATION_NAME, ServerContextUtils.getRealm(context));
+        environment.put(Constants.SSO_TOKEN, ServerContextUtils.getTokenFromContext(context, debug));
+
+        Map<?, ?> configuredValues = configuredAuthServices.getChoiceValues(environment);
+        Map<String, String> sortedValues = new TreeMap<>();
+        for (Map.Entry<?, ?> configuredValue : configuredValues.entrySet()) {
+            if (configuredValue.getKey() instanceof String) {
+                String key = (String) configuredValue.getKey();
+                Object value = configuredValue.getValue();
+                sortedValues.put(key, value instanceof String ? (String) value : key);
+            }
+        }
+
+        Map<String, String> result = new LinkedHashMap<>();
+        if (sortedValues.containsKey(ISAuthConstants.BLANK)) {
+            result.put(ISAuthConstants.BLANK, sortedValues.remove(ISAuthConstants.BLANK));
+        }
+        result.putAll(sortedValues);
+        return result;
+    }
+
+    private void validateUserProfile(Context context, JsonValue content) throws BadRequestException {
+        String accountLife = getSingleValue(content, ISAuthConstants.ACCOUNT_LIFE);
+        if (accountLife != null && !accountLife.isEmpty()) {
+            if (!ACCOUNT_LIFE_PATTERN.matcher(accountLife).matches()) {
+                throw new BadRequestException(
+                        "Invalid account expiration date; expected yyyy/MM/dd HH:mm:ss");
+            }
+            try {
+                LocalDateTime.parse(accountLife, ACCOUNT_LIFE_FORMAT);
+            } catch (DateTimeParseException e) {
+                throw new BadRequestException(
+                        "Invalid account expiration date; expected yyyy/MM/dd HH:mm:ss");
+            }
+        }
+
+        String authConfig = getSingleValue(content, ISAuthConstants.AUTHCONFIG_USER);
+        if (authConfig != null && !authConfig.isEmpty()
+                && !getAuthenticationConfigurations(context).containsKey(authConfig)) {
+            throw new BadRequestException("Unknown user authentication configuration");
+        }
+    }
+
+    private String getSingleValue(JsonValue content, String property) throws BadRequestException {
+        JsonValue value = content.get(property);
+        if (value.isNull()) {
+            return null;
+        }
+        if (value.isString()) {
+            return value.asString();
+        }
+        if (value.isList()) {
+            List<?> values = value.asList();
+            if (values.isEmpty()) {
+                return null;
+            }
+            if (values.size() == 1 && values.get(0) instanceof String) {
+                return (String) values.get(0);
+            }
+        }
+        throw new BadRequestException("Expected a single string value for " + property);
     }
 
     @Override
@@ -124,6 +253,11 @@ public class IdentityResourceV4 implements CollectionResourceProvider {
     @Override
     public Promise<ResourceResponse, ResourceException> createInstance(Context context, CreateRequest request) {
         if (IdentityRestUtils.USER_TYPE.equals(objectType)) {
+            try {
+                validateUserProfile(context, request.getContent());
+            } catch (BadRequestException e) {
+                return e.asPromise();
+            }
             return identityResourceV3.createInstance(context, request);
         }
 
@@ -301,6 +435,11 @@ public class IdentityResourceV4 implements CollectionResourceProvider {
     public Promise<ResourceResponse, ResourceException> updateInstance(Context context, String resourceId,
             UpdateRequest request) {
         if (IdentityRestUtils.USER_TYPE.equals(objectType)) {
+            try {
+                validateUserProfile(context, request.getContent());
+            } catch (BadRequestException e) {
+                return e.asPromise();
+            }
             return identityResourceV3.updateInstance(context, resourceId, request);
         }
 
