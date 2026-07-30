@@ -329,10 +329,9 @@ public class IdentityServicesImpl implements com.sun.identity.idsvcs.IdentitySer
                     setMemberships(repo, amIdentity, roles, IdType.ROLE);
                 }
 
-                Set<String> groups = asSet(identity.getGroupList());
-
-                if (!groups.isEmpty()) {
-                    setMemberships(repo, amIdentity, groups, IdType.GROUP);
+                ListWrapper groupList = identity.getGroupList();
+                if (groupList != null) {
+                    setMemberships(repo, amIdentity, asSet(groupList), IdType.GROUP);
                 }
             }
 
