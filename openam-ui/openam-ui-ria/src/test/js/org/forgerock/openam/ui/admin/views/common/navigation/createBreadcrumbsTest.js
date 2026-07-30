@@ -42,7 +42,8 @@ define([
                 "console.common.navigation.identities": "Identities",
                 "console.common.navigation.new": "New",
                 "console.common.navigation.policies": "Policies",
-                "console.common.navigation.services": "Services"
+                "console.common.navigation.services": "Services",
+                "console.common.navigation.users": "Users"
             };
             $ = {
                 t: sinon.stub().callsFake((key, options = {}) => translations[key] || options.defaultValue)
@@ -388,6 +389,52 @@ define([
                     },
                     {
                         title:"group-mixed"
+                    }
+                ]);
+            });
+        });
+
+        context("When on the Edit User view", () => {
+            it("translates the nested user collection breadcrumb", () => {
+                URIUtils.getCurrentFragment.returns("realms/%2F/identities/users/edit/user-mixed");
+                const pattern = "realms/?/identities/users/edit/?";
+                expect(createBreadcrumbs(pattern)).to.eql([
+                    {
+                        title:"Identities",
+                        path:"#realms/%2F/identities"
+                    },
+                    {
+                        title:"Users"
+                    },
+                    {
+                        title:"user-mixed"
+                    }
+                ]);
+            });
+        });
+
+        context("When on the Edit User Service view", () => {
+            it("translates the nested user service collection breadcrumb", () => {
+                URIUtils.getCurrentFragment.returns(
+                    "realms/%2F/identities/users/edit/user-mixed/services/edit/oauth-service");
+                const pattern = "realms/?/identities/users/edit/?/services/edit/?";
+                expect(createBreadcrumbs(pattern)).to.eql([
+                    {
+                        title:"Identities",
+                        path:"#realms/%2F/identities"
+                    },
+                    {
+                        title:"Users"
+                    },
+                    {
+                        title:"user-mixed",
+                        path:"#realms/%2F/identities/users/edit/user-mixed"
+                    },
+                    {
+                        title:"Services"
+                    },
+                    {
+                        title:"oauth-service"
                     }
                 ]);
             });

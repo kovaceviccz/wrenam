@@ -12,23 +12,29 @@
  * information: "Portions copyright [year] [name of copyright owner]".
  *
  * Copyright 2018-2022 ForgeRock AS.
+ * Portions copyright 2026 Wren Security.
  */
 import { bindActionCreators } from "redux";
-import { isEmpty, isEqual, map, values } from "lodash";
+import { isEmpty, isEqual, map, pick } from "lodash";
+import { t } from "i18next";
 import PropTypes from "prop-types";
 import React, { Component } from "react";
 
 import { searchUsers, remove } from "org/forgerock/openam/ui/admin/services/realm/identities/UsersService";
 import { setInstances } from "store/modules/remote/config/realm/identities/users/instances";
-import { show as showDeleteDialog } from "components/dialogs/Delete";
 import connectWithStore from "components/redux/connectWithStore";
 import ListUsers from "./ListUsers";
 import Messages from "org/forgerock/commons/ui/common/components/Messages";
 import Router from "org/forgerock/commons/ui/common/main/Router";
+import showConfirmationBeforeAction from "org/forgerock/openam/ui/admin/utils/form/showConfirmationBeforeAction";
 import withPagination, { withPaginationPropTypes }
     from "org/forgerock/openam/ui/admin/views/realms/common/withPagination";
 import withRouter from "org/forgerock/commons/ui/common/components/hoc/withRouter";
 import withRouterPropType from "org/forgerock/commons/ui/common/components/hoc/withRouterPropType";
+
+const REQUEST_PAGINATION_FIELDS = [
+    "page", "pagedResultsOffset", "searchTerm", "sizePerPage", "sortDirection", "sortKey"
+];
 
 class ListUsersContainer extends Component {
     static propTypes = {
@@ -43,31 +49,39 @@ class ListUsersContainer extends Component {
     };
 
     componentDidMount () {
+        this.props.setInstances([]);
         this.handleTableDataChange(this.props.pagination);
     }
 
-    componentDidUpdate (prevProps) {
-        if (!isEqual(this.props.pagination, prevProps.pagination)) {
-            this.handleTableDataChange(this.props.pagination);
+    // eslint-disable-next-line camelcase
+    UNSAFE_componentWillReceiveProps (nextProps) {
+        if (!isEqual(pick(this.props.pagination, REQUEST_PAGINATION_FIELDS),
+            pick(nextProps.pagination, REQUEST_PAGINATION_FIELDS))) {
+            this.handleTableDataChange(nextProps.pagination);
         }
     }
 
-    handleDelete = (items) => {
-        const ids = items.map((item) => item._id);
+    componentWillUnmount () {
+        this.isUnmounted = true;
+    }
 
-        showDeleteDialog({
-            names: ids,
-            objectName: "identity",
-            onConfirm: async () => {
-                try {
-                    const realm = this.props.router.params[0];
-                    await remove(realm, ids);
-                } catch (error) {
-                    Messages.addMessage({ response: error, type: Messages.TYPE_DANGER });
-                } finally {
-                    this.props.pagination.onDataDelete(ids.length);
+    handleDelete = (items) => {
+        const ids = map(items, "_id");
+        const message = t("console.identities.users.confirmDeleteSelected", { count: ids.length });
+
+        showConfirmationBeforeAction({ message }, () => {
+            const realm = this.props.router.params[0];
+            remove(realm, ids).then(() => {
+                Messages.addMessage({ message: t("config.messages.AppMessages.changesSaved") });
+                const pagination = this.props.pagination;
+                const movesToPreviousPage = pagination.onDataDelete(ids.length);
+                if (!movesToPreviousPage) {
+                    this.handleTableDataChange(pagination);
                 }
-            }
+            }, (response) => {
+                this.handleTableDataChange(this.props.pagination);
+                Messages.addMessage({ response, type: Messages.TYPE_DANGER });
+            });
         });
     };
 
@@ -85,14 +99,28 @@ class ListUsersContainer extends Component {
         const realm = this.props.router.params[0];
         const additionalParams = {
             fields: ["cn", "mail", "username", "inetUserStatus"],
-            pagination
+            pagination: {
+                ...pagination,
+                sortKey: pagination.sortKey || "username"
+            }
         };
         searchUsers(realm, additionalParams).then((response) => {
+            if (this.isUnmounted || realm !== this.props.router.params[0] ||
+                !isEqual(pick(pagination, REQUEST_PAGINATION_FIELDS),
+                    pick(this.props.pagination, REQUEST_PAGINATION_FIELDS))) {
+                return;
+            }
             this.setState({ isFetching: false });
             this.props.pagination.onDataChange(response);
             this.props.setInstances(response.result);
         }, (response) => {
+            if (this.isUnmounted || realm !== this.props.router.params[0] ||
+                !isEqual(pick(pagination, REQUEST_PAGINATION_FIELDS),
+                    pick(this.props.pagination, REQUEST_PAGINATION_FIELDS))) {
+                return;
+            }
             this.setState({ isFetching: false });
+            this.props.setInstances([]);
             Messages.addMessage({ response, type: Messages.TYPE_DANGER });
         });
     };
@@ -123,7 +151,7 @@ class ListUsersContainer extends Component {
 
 ListUsersContainer = connectWithStore(ListUsersContainer,
     (state) => ({
-        identities: values(state.remote.config.realm.identities.users.instances)
+        identities: state.remote.config.realm.identities.users.instances
     }),
     (dispatch) => ({
         setInstances: bindActionCreators(setInstances, dispatch)

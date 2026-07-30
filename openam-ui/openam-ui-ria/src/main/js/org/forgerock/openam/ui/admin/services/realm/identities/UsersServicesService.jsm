@@ -12,6 +12,7 @@
  * information: "Portions copyright [year] [name of copyright owner]".
  *
  * Copyright 2018-2023 ForgeRock AS.
+ * Portions copyright 2026 Wren Security.
  */
 
 /**
@@ -20,9 +21,9 @@
 
 import AbstractDelegate from "org/forgerock/commons/ui/common/main/AbstractDelegate";
 import Constants from "org/forgerock/openam/ui/common/util/Constants";
-import fetchUrl from "api/fetchUrl";
+import fetchUrl from "org/forgerock/openam/ui/common/services/fetchUrl";
 
-const obj = new AbstractDelegate(`${Constants.host}${Constants.context}/json`);
+const obj = new AbstractDelegate(`${Constants.host}/${Constants.context}/json`);
 
 export function getSchema (realm, type, userId) {
     return obj.serviceCall({
@@ -45,7 +46,7 @@ export function update (realm, type, userId, data) {
         url: fetchUrl(`/users/${encodeURIComponent(userId)}/services/${encodeURIComponent(type)}`, { realm }),
         type: "PUT",
         headers: { "Accept-API-Version": "protocol=1.0,resource=1.0" },
-        data: data.toJSON()
+        data: JSON.stringify(data)
     });
 }
 
@@ -84,18 +85,18 @@ export function getCreatables (realm, userId) {
     });
 }
 
-export function getTemplate (realm, type, id) {
+export function getTemplate (realm, type, userId) {
     return obj.serviceCall({
-        url: fetchUrl(`/users/${encodeURIComponent(id)}/services/${encodeURIComponent(type)}?_action=template`,
+        url: fetchUrl(`/users/${encodeURIComponent(userId)}/services/${encodeURIComponent(type)}?_action=template`,
             { realm }),
-        headers: { "Accept-API-Version": "protocol=2.1,resource=1.0" },
+        headers: { "Accept-API-Version": "protocol=1.0,resource=1.0" },
         type: "POST"
     });
 }
 
-export function create (realm, id, type, data) {
+export function create (realm, userId, type, data) {
     return obj.serviceCall({
-        url: fetchUrl(`/users/${encodeURIComponent(id)}/services/${encodeURIComponent(type)}`, { realm }),
+        url: fetchUrl(`/users/${encodeURIComponent(userId)}/services/${encodeURIComponent(type)}`, { realm }),
         headers: { "Accept-API-Version": "protocol=2.1,resource=1.0" },
         type: "POST",
         data: JSON.stringify(data)

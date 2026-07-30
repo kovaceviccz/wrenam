@@ -12,9 +12,10 @@
  * information: "Portions copyright [year] [name of copyright owner]".
  *
  * Copyright 2018-2022 ForgeRock AS.
+ * Portions copyright 2026 Wren Security.
  */
 
-import { identity, isEmpty, omit } from "lodash";
+import { escapeRegExp, identity, isEmpty, omit } from "lodash";
 import { Panel } from "react-bootstrap";
 import { t } from "i18next";
 import PropTypes from "prop-types";
@@ -30,13 +31,26 @@ import StatusCell from "components/table/cells/StatusCell";
 
 class ListUsers extends Component {
     static propTypes = {
+        isFetching: PropTypes.bool.isRequired,
         isSearching: PropTypes.bool.isRequired,
-        items: PropTypes.arrayOf(PropTypes.any),
+        items: PropTypes.arrayOf(PropTypes.object).isRequired,
         newHref: PropTypes.string.isRequired,
-        onSearchKeyPress: PropTypes.func.isRequired
+        onSearchKeyPress: PropTypes.func.isRequired,
+        searchTerm: PropTypes.string.isRequired
     };
 
-    state = { searchTerm: "" };
+    constructor (props) {
+        super(props);
+
+        this.state = { searchTerm: props.searchTerm };
+    }
+
+    // eslint-disable-next-line camelcase
+    UNSAFE_componentWillReceiveProps (nextProps) {
+        if (nextProps.searchTerm !== this.props.searchTerm) {
+            this.setState({ searchTerm: nextProps.searchTerm });
+        }
+    }
 
     handleSearchClear = () => {
         this.setState({ searchTerm: "" }, () => {
@@ -51,18 +65,20 @@ class ListUsers extends Component {
     handleSearchKeyPress = (event) => {
         if (event.key === "Enter") {
             event.preventDefault();
-            this.setState({ searchTerm: event.currentTarget.value });
-            this.props.onSearchKeyPress(this.state.searchTerm);
+            const searchTerm = event.currentTarget.value;
+            this.setState({ searchTerm });
+            this.props.onSearchKeyPress(searchTerm);
         }
     };
 
     render () {
+        const emphasizedSearchTerm = escapeRegExp(this.state.searchTerm);
         const columns = [{
             title: identity,
             dataField: "username",
             formatter: dataFormatReact(
                 <FontAwesomeIconCell icon="address-card" >
-                    <EmphasizedTextCell match={ this.state.searchTerm } />
+                    <EmphasizedTextCell match={ emphasizedSearchTerm } />
                 </FontAwesomeIconCell>
             ),
             sort: true,
@@ -71,13 +87,13 @@ class ListUsers extends Component {
             title: true,
             dataField: "cn",
             formatter: dataFieldObjectPath(dataFormatReact(
-                <EmphasizedTextCell match={ this.state.searchTerm } />
+                <EmphasizedTextCell match={ emphasizedSearchTerm } />
             ), "[0]"),
             text: t("console.identities.users.list.grid.1")
         }, {
             dataField: "mail",
             formatter: dataFieldObjectPath(dataFormatReact(
-                <EmphasizedTextCell match={ this.state.searchTerm } />
+                <EmphasizedTextCell match={ emphasizedSearchTerm } />
             ), "[0]"),
             text: t("console.identities.users.list.grid.2")
         }, {
@@ -94,14 +110,16 @@ class ListUsers extends Component {
                 } }
                 columns={ columns }
                 description={ t("console.identities.users.list.callToAction.description") }
-                keyField="username"
+                keyField="_id"
                 title={ t("console.identities.users.list.callToAction.title") }
             />
         );
         const noResults = (
             t("console.identities.users.list.noSuchUser")
         );
-        const content = this.props.isSearching && isEmpty(this.props.items) ? noResults : list;
+        const content = !this.props.isFetching && this.props.isSearching && isEmpty(this.props.items)
+            ? noResults
+            : list;
         return (
             <Panel className="fr-panel-tab">
                 <Panel.Body>

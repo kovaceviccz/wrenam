@@ -12,27 +12,28 @@
  * information: "Portions copyright [year] [name of copyright owner]".
  *
  * Copyright 2018-2019 ForgeRock AS.
+ * Portions copyright 2026 Wren Security.
  */
 
-import { find, map, result } from "lodash";
+import { find, isEqual, map, result } from "lodash";
 import { t } from "i18next";
 
 import { getAllTypes, getSchema, get as getUserService, remove, update } from
     "org/forgerock/openam/ui/admin/services/realm/identities/UsersServicesService";
 import AbstractView from "org/forgerock/commons/ui/common/main/AbstractView";
 import FlatJSONSchemaView from "org/forgerock/openam/ui/common/views/jsonSchema/FlatJSONSchemaView";
-import FormHelper from "org/forgerock/openam/ui/admin/utils/FormHelper";
 import JSONSchema from "org/forgerock/openam/ui/common/models/JSONSchema";
 import JSONValues from "org/forgerock/openam/ui/common/models/JSONValues";
 import Messages from "org/forgerock/commons/ui/common/components/Messages";
 import Router from "org/forgerock/commons/ui/common/main/Router";
-import EditUserServiceTemplate from "templates/admin/views/realms/identities/users/services/EditUserServiceTemplate";
+import showConfirmationBeforeAction from "org/forgerock/openam/ui/admin/utils/form/showConfirmationBeforeAction";
+import ViewManager from "org/forgerock/commons/ui/common/main/ViewManager";
 
 class EditUserService extends AbstractView {
     constructor () {
         super();
 
-        this.template = EditUserServiceTemplate;
+        this.template = "templates/admin/views/realms/identities/users/services/EditUserServiceTemplate.html";
 
         this.events = {
             "click [data-delete]": "onDelete",
@@ -40,9 +41,26 @@ class EditUserService extends AbstractView {
         };
     }
 
-    render ([realm, userId, type]) {
+    render (args) {
+        const [realm, userId, type] = args;
+        const route = Router.currentRoute;
+        const viewArgs = ViewManager.currentViewArgs;
+        this.route = route;
+        this.viewArgs = viewArgs;
+        const currentArgs = map(viewArgs, (arg) => (arg && decodeURIComponent(arg)) || "");
+        if (!isEqual(args, currentArgs)) {
+            return;
+        }
+
+        if (this.view) {
+            this.view.destroy();
+            this.view.remove();
+            this.view = null;
+        }
+
         this.data = {
             id: userId,
+            saveDisabled: true,
             headerActions: [{
                 actionPartial: "form/_Button", data: "delete", title: "common.form.delete", icon: "fa-times"
             }]
@@ -55,24 +73,50 @@ class EditUserService extends AbstractView {
             getUserService(realm, type, userId),
             getAllTypes(realm, userId)
         ]).then(([schema, service, serviceTypes]) => {
-            this.schema = new JSONSchema(schema);
-            this.values = new JSONValues(service);
+            if (!this.isCurrentView(route, viewArgs)) {
+                return;
+            }
+            const editorSchema = new JSONSchema(schema);
+            const editorValues = new JSONValues(service);
             this.data.type = t("console.identities.users.edit.services.edit.subtitle", {
-                type: result(find(serviceTypes, { "_id": this.type }), "name")
+                type: result(find(serviceTypes.result, { "_id": type }), "name", type)
             });
 
             this.parentRender(() => {
+                if (!this.isCurrentView(route, viewArgs)) {
+                    return;
+                }
                 this.view = new FlatJSONSchemaView({
-                    schema: this.schema,
-                    values: this.values
+                    schema: editorSchema,
+                    values: editorValues,
+                    onRendered: () => this.handleEditorRendered(route, viewArgs)
                 });
-                this.view.setElement("[data-json-form]");
+                this.view.setElement(this.$("[data-json-form]"));
                 this.view.render();
             });
+        }, (response) => {
+            if (this.isCurrentView(route, viewArgs)) {
+                Messages.addMessage({ response, type: Messages.TYPE_DANGER });
+            }
         });
     }
 
+    isCurrentView (route, viewArgs) {
+        return this.route === route && route === Router.currentRoute &&
+            this.viewArgs === viewArgs && viewArgs === ViewManager.currentViewArgs;
+    }
+
+    handleEditorRendered (route, viewArgs) {
+        if (this.isCurrentView(route, viewArgs)) {
+            this.$("[data-save]").prop("disabled", false);
+        }
+    }
+
     onSave () {
+        if (!this.view) {
+            return;
+        }
+
         if (!this.view.isValid()) {
             Messages.addMessage({
                 message: t("common.form.validation.errorsNotSaved"), type: Messages.TYPE_DANGER
@@ -80,27 +124,57 @@ class EditUserService extends AbstractView {
             return;
         }
 
-        this.values = this.values.extend(this.view.getData());
-
-        update(this.realm, this.type, this.data.id, this.values).then(() => {
-            Messages.addMessage({ message: t("config.messages.CommonMessages.changesSaved") });
+        const route = this.route;
+        const viewArgs = this.viewArgs;
+        const realm = this.realm;
+        const type = this.type;
+        const id = this.data.id;
+        this.$("[data-save]").prop("disabled", true);
+        update(realm, type, id, this.view.getData()).then(() => {
+            if (!this.isCurrentView(route, viewArgs)) {
+                return null;
+            }
+            return getUserService(realm, type, id);
+        }).then((service) => {
+            if (!service || !this.isCurrentView(route, viewArgs)) {
+                return;
+            }
+            this.view.setData(service);
+            this.$("[data-save]").prop("disabled", false);
+            Messages.addMessage({ message: t("config.messages.AppMessages.changesSaved") });
         }, (response) => {
-            Messages.addMessage({ response, type: Messages.TYPE_DANGER });
+            if (this.isCurrentView(route, viewArgs)) {
+                this.$("[data-save]").prop("disabled", false);
+                Messages.addMessage({ response, type: Messages.TYPE_DANGER });
+            }
         });
     }
 
     onDelete () {
-        FormHelper.showConfirmationBeforeDeleting({
-            message: t("console.common.confirmDeleteItem")
+        const route = this.route;
+        const viewArgs = this.viewArgs;
+        const realm = this.realm;
+        const type = this.type;
+        const id = this.data.id;
+        showConfirmationBeforeAction({
+            message: t("console.identities.users.edit.services.confirmDeleteSelected", { count: 1 })
         }, () => {
-            remove(this.realm, this.data.id, [this.type]).then(() => {
-                Messages.addMessage({ message: t("config.messages.CommonMessages.changesSaved") });
+            if (!this.isCurrentView(route, viewArgs)) {
+                return;
+            }
+            remove(realm, id, [type]).then(() => {
+                if (!this.isCurrentView(route, viewArgs)) {
+                    return;
+                }
+                Messages.addMessage({ message: t("config.messages.AppMessages.changesSaved") });
                 Router.routeTo(Router.configuration.routes.realmsIdentitiesUsersEdit, {
-                    args: map([this.realm, this.data.id], encodeURIComponent),
+                    args: map([realm, id], encodeURIComponent),
                     trigger: true
                 });
-            }, (model, response) => {
-                Messages.addMessage({ response, type: Messages.TYPE_DANGER });
+            }, (response) => {
+                if (this.isCurrentView(route, viewArgs)) {
+                    Messages.addMessage({ response, type: Messages.TYPE_DANGER });
+                }
             });
         });
     }

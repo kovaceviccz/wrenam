@@ -12,16 +12,17 @@
  * information: "Portions copyright [year] [name of copyright owner]".
  *
  * Copyright 2018-2022 ForgeRock AS.
+ * Portions copyright 2026 Wren Security.
  */
 import { bindActionCreators } from "redux";
-import { find, forEach, get, map, result } from "lodash";
+import { find, get, map } from "lodash";
 import { t } from "i18next";
 import PropTypes from "prop-types";
 import React, { Component } from "react";
 
 import { getAllInstances, getAllTypes, getCreatables, remove }
     from "org/forgerock/openam/ui/admin/services/realm/identities/UsersServicesService";
-import { removeInstance, setInstances } from "store/modules/remote/config/realm/identities/users/services/instances";
+import { setInstances } from "store/modules/remote/config/realm/identities/users/services/instances";
 import { setCreatables } from "store/modules/remote/config/realm/identities/users/services/creatables";
 import { setTypes } from "store/modules/remote/config/realm/identities/users/services/types";
 import connectWithStore from "components/redux/connectWithStore";
@@ -44,21 +45,51 @@ class ListUserServicesContainer extends Component {
     componentDidMount () {
         const realm = this.props.router.params[0];
         const userId = this.props.router.params[1];
+        this.props.setInstances([], realm, userId);
+        this.props.setTypes([], realm, userId);
+        this.props.setCreatables([], realm, userId);
+        this.loadServices().catch((response) => this.handleLoadError(response, realm, userId));
+    }
 
-        Promise.all([
+    componentWillUnmount () {
+        this.isUnmounted = true;
+    }
+
+    loadServices = () => {
+        const realm = this.props.router.params[0];
+        const userId = this.props.router.params[1];
+
+        if (this.isUnmounted) {
+            return;
+        }
+        this.setState({ isFetching: true });
+        return Promise.all([
             getAllInstances(realm, userId),
             getAllTypes(realm, userId),
             getCreatables(realm, userId)
         ]).then(([instances, types, creatables]) => {
+            if (this.isUnmounted || realm !== this.props.router.params[0] ||
+                userId !== this.props.router.params[1]) {
+                return;
+            }
             this.setState({ isFetching: false });
-            this.props.setInstances(instances.result, userId);
-            this.props.setTypes(types.result, userId);
-            this.props.setCreatables(creatables.result, userId);
-        }, (response) => {
-            this.setState({ isFetching: false });
-            Messages.addMessage({ response, type: Messages.TYPE_DANGER });
+            this.props.setInstances(instances.result, realm, userId);
+            this.props.setTypes(types.result, realm, userId);
+            this.props.setCreatables(creatables.result, realm, userId);
         });
-    }
+    };
+
+    handleLoadError = (response, realm, userId) => {
+        if (this.isUnmounted || realm !== this.props.router.params[0] ||
+            userId !== this.props.router.params[1]) {
+            return;
+        }
+        this.setState({ isFetching: false });
+        this.props.setInstances([], realm, userId);
+        this.props.setTypes([], realm, userId);
+        this.props.setCreatables([], realm, userId);
+        Messages.addMessage({ response, type: Messages.TYPE_DANGER });
+    };
 
     handleEdit = (e, item) => {
         const id = item._id;
@@ -80,18 +111,22 @@ class ListUserServicesContainer extends Component {
             message: t("console.identities.users.edit.services.confirmDeleteSelected", { count: types.length })
         }, () => {
             remove(realm, userId, types).then(() => {
-                Messages.addMessage({ message: t("config.messages.CommonMessages.changesSaved") });
-                forEach(types, (id) => {
-                    this.props.removeInstance(id, userId);
-                });
-
-                getCreatables(realm, userId).then((creatables) => {
-                    this.props.setCreatables(creatables.result, userId);
-                }, (response) => {
-                    Messages.addMessage({ response, type: Messages.TYPE_DANGER });
-                });
+                const loadPromise = this.loadServices();
+                if (loadPromise) {
+                    loadPromise.then(() => {
+                        if (!this.isUnmounted && realm === this.props.router.params[0] &&
+                            userId === this.props.router.params[1]) {
+                            Messages.addMessage({ message: t("config.messages.AppMessages.changesSaved") });
+                        }
+                    }, (response) => {
+                        this.handleLoadError(response, realm, userId);
+                    });
+                }
             }, (response) => {
-                Messages.addMessage({ response, type: Messages.TYPE_DANGER });
+                if (!this.isUnmounted && realm === this.props.router.params[0] &&
+                    userId === this.props.router.params[1]) {
+                    Messages.addMessage({ response, type: Messages.TYPE_DANGER });
+                }
             });
         });
     };
@@ -117,7 +152,6 @@ class ListUserServicesContainer extends Component {
 ListUserServicesContainer.propTypes = {
     creatables: PropTypes.arrayOf(PropTypes.object),
     instances: PropTypes.arrayOf(PropTypes.object),
-    removeInstance: PropTypes.func.isRequired,
     router: withRouterPropType,
     setCreatables: PropTypes.func.isRequired,
     setInstances: PropTypes.func.isRequired,
@@ -126,21 +160,22 @@ ListUserServicesContainer.propTypes = {
 
 ListUserServicesContainer = connectWithStore(ListUserServicesContainer,
     (state, props) => {
+        const realm = props.router.params[0];
         const userId = props.router.params[1];
-        const types = get(state.remote.config.realm.identities.users.services.types, userId);
-        const nextDescendants = get(state.remote.config.realm.identities.users.services.instances, userId);
-        const instances = map(nextDescendants, (instance) => {
-            instance.name = result(find(types, { "_id": instance._id }), "name");
-            return instance;
-        });
+        const types = get(state.remote.config.realm.identities.users.services.types, [realm, userId], []);
+        const nextDescendants =
+            get(state.remote.config.realm.identities.users.services.instances, [realm, userId], []);
+        const instances = map(nextDescendants, (instance) => ({
+            ...instance,
+            name: get(find(types, { "_id": instance._id }), "name", instance._id)
+        }));
 
         return {
-            creatables: get(state.remote.config.realm.identities.users.services.creatables, userId),
+            creatables: get(state.remote.config.realm.identities.users.services.creatables, [realm, userId], []),
             instances
         };
     },
     (dispatch) => ({
-        removeInstance: bindActionCreators(removeInstance, dispatch),
         setCreatables: bindActionCreators(setCreatables, dispatch),
         setInstances: bindActionCreators(setInstances, dispatch),
         setTypes: bindActionCreators(setTypes, dispatch)

@@ -12,21 +12,25 @@
  * information: "Portions copyright [year] [name of copyright owner]".
  *
  * Copyright 2018-2019 ForgeRock AS.
+ * Portions copyright 2026 Wren Security.
  */
 import { createAction, handleActions } from "redux-actions";
 
 // Types
-const SET_TYPES = "remote/config/realm/identities/users/services/creatables/SET_TYPES";
+const SET_TYPES = "remote/config/realm/identities/users/services/types/SET_TYPES";
 
 // Actions
 export const setTypes = createAction(SET_TYPES,
-    (payload) => payload, (payload, userId) => ({ userId }));
+    (payload) => payload, (payload, realm, userId) => ({ realm, userId }));
 
 // Reducer
 const initialState = {};
 export default handleActions({
     [SET_TYPES]: (state, action) => ({
         ...state,
-        [action.meta.userId]: action.payload
+        [action.meta.realm]: {
+            ...state[action.meta.realm],
+            [action.meta.userId]: action.payload
+        }
     })
 }, initialState);

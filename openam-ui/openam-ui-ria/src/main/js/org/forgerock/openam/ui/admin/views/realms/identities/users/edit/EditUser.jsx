@@ -12,6 +12,7 @@
  * information: "Portions copyright [year] [name of copyright owner]".
  *
  * Copyright 2018-2019 ForgeRock AS.
+ * Portions copyright 2026 Wren Security.
  */
 
 import { Tab, Tabs } from "react-bootstrap";
@@ -27,11 +28,11 @@ import withRouter from "org/forgerock/commons/ui/common/components/hoc/withRoute
 import withRouterPropType from "org/forgerock/commons/ui/common/components/hoc/withRouterPropType";
 
 const EditUser = ({ router }) => {
-    const identity = decodeURIComponent(router.params[1]);
+    const identity = router.params[1];
     return (
         <div>
             <PageHeader icon="address-card" subtitle={ t("console.identities.users.edit.type") } title={ identity } />
-            <Tabs animation defaultActiveKey={ 1 } id="editUser" mountOnEnter unmountOnExit >
+            <Tabs animation={ false } defaultActiveKey={ 1 } id="editUser" mountOnEnter unmountOnExit>
                 <Tab eventKey={ 1 } title={ t("console.identities.users.edit.tabs.0") }>
                     <EditUserGeneral />
                 </Tab>

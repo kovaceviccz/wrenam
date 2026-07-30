@@ -12,6 +12,7 @@
  * information: "Portions copyright [year] [name of copyright owner]".
  *
  * Copyright 2017-2019 ForgeRock AS.
+ * Portions copyright 2026 Wren Security.
  */
 
 import { Clearfix, Col, ControlLabel, FormControl, FormGroup, HelpBlock } from "react-bootstrap";
@@ -21,11 +22,11 @@ import React, { Component } from "react";
 
 class FormGroupInput extends Component {
     handleOnChange = (event) => {
-        this.props.onChange(event.target.value);
+        this.props.onChange(event.target.value, event.target.validity.valid);
     };
 
     render () {
-        const { isGrid, isValid, value, validationMessage, label, placeholder } = this.props;
+        const { isGrid, isValid, value, validationMessage, label, placeholder, type } = this.props;
         const message = !isValid && validationMessage
             ? <HelpBlock><small dangerouslySetInnerHTML={ { __html: validationMessage } } /></HelpBlock> // eslint-disable-line react/no-danger
             : null;
@@ -33,7 +34,7 @@ class FormGroupInput extends Component {
             <FormControl
                 onChange={ this.handleOnChange }
                 placeholder={ placeholder }
-                type="text"
+                type={ type }
                 value={ value }
             />
         );
@@ -64,7 +65,8 @@ class FormGroupInput extends Component {
 
 FormGroupInput.defaultProps = {
     isGrid: true,
-    isValid: true
+    isValid: true,
+    type: "text"
 };
 
 FormGroupInput.propTypes = {
@@ -73,6 +75,7 @@ FormGroupInput.propTypes = {
     label: PropTypes.string.isRequired,
     onChange: PropTypes.func.isRequired,
     placeholder: PropTypes.string,
+    type: PropTypes.string,
     validationMessage: PropTypes.string,
     value: PropTypes.string.isRequired
 };

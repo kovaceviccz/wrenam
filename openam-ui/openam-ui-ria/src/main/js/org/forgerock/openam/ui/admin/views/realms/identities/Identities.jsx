@@ -20,6 +20,7 @@ import { t } from "i18next";
 import React from "react";
 
 import ListGroupsContainer from "./groups/list/ListGroupsContainer";
+import ListUsersContainer from "./users/list/ListUsersContainer";
 import PageHeader from "components/PageHeader";
 
 const Identities = () => {
@@ -28,6 +29,9 @@ const Identities = () => {
             <PageHeader title={ t("console.identities.title") } />
             <Tabs animation={ false } defaultActiveKey={ 1 } id="identities" mountOnEnter unmountOnExit>
                 <Tab eventKey={ 1 } title={ t("console.identities.tabs.0") }>
+                    <ListUsersContainer />
+                </Tab>
+                <Tab eventKey={ 2 } title={ t("console.identities.tabs.1") }>
                     <ListGroupsContainer />
                 </Tab>
             </Tabs>

@@ -744,6 +744,7 @@
                 "sts": "STS",
                 "subjects": "Subjects",
                 "identities": "Identities",
+                "users": "Users",
                 "uma": "UMA",
                 "wsfed": "WS-Fed",
                 "applications-agents" : "Applications - Agents"
@@ -949,8 +950,49 @@
             }
         },
         "identities": {
-            "tabs": ["Groups"],
+            "tabs": ["Users", "Groups"],
             "title": "Identities",
+            "users": {
+                "confirmDeleteSelected": "Are you sure you want to delete the selected user?",
+                "confirmDeleteSelected_plural": "Are you sure you want to delete the selected users?",
+                "edit": {
+                    "tabs": ["General", "Services", "Groups"],
+                    "type": "User",
+                    "services": {
+                        "confirmDeleteSelected": "Are you sure you want to remove the selected service from this user?",
+                        "confirmDeleteSelected_plural": "Are you sure you want to remove the selected services from this user?",
+                        "edit": {
+                            "subtitle": "Edit __type__ service"
+                        },
+                        "list": {
+                            "grid": ["Name"],
+                            "callToAction": {
+                                "title": "No services configured.",
+                                "description": "Configure services for this user.",
+                                "button": "Add Service"
+                            }
+                        },
+                        "new": {
+                            "subtitle": "New __type__ service"
+                        }
+                    }
+                },
+                "new": {
+                    "title": "New User",
+                    "userId": "User ID",
+                    "emailAddress": "Email address"
+                },
+                "list": {
+                    "grid": ["Username", "Full name", "Email address", "Status"],
+                    "callToAction": {
+                        "title": "No users configured.",
+                        "description": "Configure users who can authenticate to this realm.",
+                        "button": "Add User"
+                    },
+                    "noSuchUser": "No users matched your search.",
+                    "search": "Search users..."
+                }
+            },
             "groups": {
                 "confirmDeleteSelected": "Are you sure you want to delete the selected group?",
                 "confirmDeleteSelected_plural": "Are you sure you want to delete the selected groups?",

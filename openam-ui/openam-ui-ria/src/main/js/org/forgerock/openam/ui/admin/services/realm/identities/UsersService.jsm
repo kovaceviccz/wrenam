@@ -18,7 +18,7 @@
 /**
  * @module org/forgerock/openam/ui/admin/services/realm/identities/UsersService
  */
-import { map, omitBy, startsWith } from "lodash";
+import { find, map, omit, omitBy, startsWith } from "lodash";
 
 import AbstractDelegate from "org/forgerock/commons/ui/common/main/AbstractDelegate";
 import Constants from "org/forgerock/openam/ui/common/util/Constants";
@@ -69,7 +69,16 @@ export function remove (realm, ids) {
         errorsHandlers : { "Forbidden": { status: 403 } }
     }));
 
-    return Promise.all(promises);
+    return Promise.all(map(promises, (promise) => promise.then(
+        (response) => ({ response }),
+        (error) => ({ error })
+    ))).then((results) => {
+        const failure = find(results, "error");
+        if (failure) {
+            throw failure.error;
+        }
+        return map(results, "response");
+    });
 }
 
 export function getByUsernameStartsWith (realm, username, additionalParams = {}) {
@@ -85,10 +94,13 @@ export function searchUsers (realm, additionalParams = {}) {
     const pagination = constructPaginationParams(additionalParams.pagination);
     const fields = constructFieldParams(additionalParams.fields);
     const term = additionalParams.pagination.searchTerm;
-    const queryFilter = term ? encodeURIComponent(`_id co "${term}" or cn co "${term}" or mail co "${term}"`) : "true";
+    const queryValue = JSON.stringify(term);
+    const queryFilter = term
+        ? encodeURIComponent(`_id co ${queryValue} or cn co ${queryValue} or mail co ${queryValue}`)
+        : "true";
     return obj.serviceCall({
         url: fetchUrl(`/users?_queryFilter=${queryFilter}${pagination}${fields}`, { realm }),
-        headers: { "Accept-API-Version": "protocol=2.1, resource=4.0" }
+        headers: { "Accept-API-Version": "protocol=2.1,resource=4.0" }
     });
 }
 
@@ -100,7 +112,6 @@ export function get (realm, id) {
 }
 
 export function update (realm, data, id) {
-    const omitReadOnlyProperties = (obj) => omitBy(obj, (prop, key) => startsWith(key, "_"));
     return obj.serviceCall({
         url: fetchUrl(`/users/${encodeURIComponent(id)}`, { realm }),
         type: "PUT",
@@ -109,7 +120,8 @@ export function update (realm, data, id) {
             "If-Match": "*"
         },
         // CREST Protocol 2.0 payload must not transmit _rev
-        data: JSON.stringify(omitReadOnlyProperties(data))
+        data: JSON.stringify(omitBy(omit(data, ["dn", "objectclass", "username"]),
+            (prop, key) => startsWith(key, "_")))
     });
 }
 

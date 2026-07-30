@@ -280,6 +280,43 @@ define(function () {
                 navGroup: "admin",
                 forceUpdate: true
             },
+            "realmsIdentitiesUsersEdit": {
+                view: "org/forgerock/openam/ui/admin/views/realms/RealmTreeNavigationView",
+                page: "org/forgerock/openam/ui/admin/views/realms/identities/users/edit/EditUser",
+                url: scopedByRealm("identities/users/edit/([^/]*)"),
+                pattern: "realms/?/identities/users/edit/?",
+                role: "ui-realm-admin",
+                navGroup: "admin",
+                forceUpdate: true
+            },
+            "realmsIdentitiesUsersNew": {
+                view: "org/forgerock/openam/ui/admin/views/realms/RealmTreeNavigationView",
+                page: "org/forgerock/openam/ui/admin/views/realms/identities/users/new/NewUserContainer",
+                url: scopedByRealm("identities/users/new"),
+                pattern: "realms/?/identities/users/new",
+                role: "ui-realm-admin",
+                navGroup: "admin",
+                forceUpdate: true
+            },
+            "realmsIdentitiesUsersServicesNew": {
+                view: "org/forgerock/openam/ui/admin/views/realms/RealmTreeNavigationView",
+                page: "org/forgerock/openam/ui/admin/views/realms/identities/users/edit/services/new/" +
+                    "NewUserServiceContainer",
+                url: scopedByRealm("identities/users/edit/([^/]*)/services/new/([^/]*)"),
+                pattern: "realms/?/identities/users/edit/?/services/new/?",
+                role: "ui-realm-admin",
+                navGroup: "admin",
+                forceUpdate: true
+            },
+            "realmsIdentitiesUsersServicesEdit": {
+                view: "org/forgerock/openam/ui/admin/views/realms/RealmTreeNavigationView",
+                page: "org/forgerock/openam/ui/admin/views/realms/identities/users/edit/services/edit/EditUserService",
+                url: scopedByRealm("identities/users/edit/([^/]*)/services/edit/([^/]*)"),
+                pattern: "realms/?/identities/users/edit/?/services/edit/?",
+                role: "ui-realm-admin",
+                navGroup: "admin",
+                forceUpdate: true
+            },
             "realmsIdentitiesGroupsEdit": {
                 view: "org/forgerock/openam/ui/admin/views/realms/RealmTreeNavigationView",
                 page: "org/forgerock/openam/ui/admin/views/realms/identities/groups/edit/EditGroupContainer",

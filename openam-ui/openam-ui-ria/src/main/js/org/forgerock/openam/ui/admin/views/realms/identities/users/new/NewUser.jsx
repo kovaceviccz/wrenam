@@ -12,6 +12,7 @@
  * information: "Portions copyright [year] [name of copyright owner]".
  *
  * Copyright 2018-2020 ForgeRock AS.
+ * Portions copyright 2026 Wren Security.
  */
 
 import { Form, Panel } from "react-bootstrap";
@@ -25,24 +26,48 @@ import FormGroupInput from "org/forgerock/openam/ui/admin/views/realms/common/Fo
 import JSONSchema from "org/forgerock/openam/ui/common/models/JSONSchema";
 import JSONValues from "org/forgerock/openam/ui/common/models/JSONValues";
 import Loading from "components/Loading";
+import Messages from "org/forgerock/commons/ui/common/components/Messages";
 import PageHeader from "components/PageHeader";
 import Router from "org/forgerock/commons/ui/common/main/Router";
 
 class NewUser extends Component {
+    constructor (props) {
+        super(props);
+
+        this.state = {
+            isEditorReady: false
+        };
+    }
+
     componentDidUpdate () {
-        if (!this.jsonSchemaView && this.props.template) {
+        if (!this.jsonSchemaView && this.props.schema && this.props.template && this.jsonForm) {
             this.jsonSchemaView = new FlatJSONSchemaView({
                 hideInheritance: true,
                 schema: new JSONSchema(this.props.schema),
                 values: new JSONValues(this.props.template),
-                showOnlyRequired: true
+                showOnlyRequiredAndEmpty: true,
+                onRendered: this.handleEditorRendered
             });
             this.jsonForm.appendChild(this.jsonSchemaView.render().el);
         }
     }
 
+    componentWillUnmount () {
+        if (this.jsonSchemaView) {
+            this.jsonSchemaView.destroy();
+        }
+    }
+
     handleCreate = () => {
+        if (!this.jsonSchemaView.isValid()) {
+            Messages.addMessage({ message: t("common.form.validation.errorsNotSaved"), type: Messages.TYPE_DANGER });
+            return;
+        }
         this.props.onCreate(this.jsonSchemaView.getData());
+    };
+
+    handleEditorRendered = () => {
+        this.setState({ isEditorReady: true });
     };
 
     setRef = (element) => {
@@ -66,8 +91,12 @@ class NewUser extends Component {
                     />
                     <div ref={ this.setRef } />
                     <FormGroupInput
+                        isValid={ this.props.isValidEmail }
                         label={ t("console.identities.users.new.emailAddress") }
                         onChange={ this.props.onEmailChange }
+                        type="email"
+                        validationMessage={ t("common.form.validation.VALID_EMAIL_ADDRESS_FORMAT") }
+                        value={ this.props.email }
                     />
                 </Form>
             );
@@ -81,7 +110,7 @@ class NewUser extends Component {
                     <Panel.Footer>
                         <CreateFooter
                             backRoute={ Router.configuration.routes.realmsIdentities }
-                            disabled={ !this.props.isCreateAllowed }
+                            disabled={ !this.props.isCreateAllowed || !this.state.isEditorReady }
                             onCreateClick={ this.handleCreate }
                         />
                     </Panel.Footer>
@@ -92,15 +121,20 @@ class NewUser extends Component {
 }
 
 NewUser.propTypes = {
+    email: PropTypes.string.isRequired,
     id: PropTypes.string.isRequired,
     isCreateAllowed: PropTypes.bool.isRequired,
     isFetching: PropTypes.bool.isRequired,
+    isValidEmail: PropTypes.bool.isRequired,
     isValidId: PropTypes.bool.isRequired,
     onCreate: PropTypes.func.isRequired,
     onEmailChange: PropTypes.func.isRequired,
     onIdChange: PropTypes.func.isRequired,
-    schema: PropTypes.objectOf(PropTypes.object).isRequired,
-    template: PropTypes.objectOf(PropTypes.object).isRequired
+    schema: PropTypes.shape({
+        properties: PropTypes.objectOf(PropTypes.object),
+        type: PropTypes.string
+    }),
+    template: PropTypes.objectOf(PropTypes.any)
 };
 
 export default NewUser;

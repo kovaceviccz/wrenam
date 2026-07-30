@@ -12,33 +12,25 @@
  * information: "Portions copyright [year] [name of copyright owner]".
  *
  * Copyright 2018-2019 ForgeRock AS.
+ * Portions copyright 2026 Wren Security.
  */
 import { createAction, handleActions } from "redux-actions";
-import { find, without } from "lodash";
 
 // Types
-const REMOVE_INSTANCE = "remote/config/realm/identities/users/services/instances/REMOVE_INSTANCE";
 const SET_INSTANCES = "remote/config/realm/identities/users/services/instances/SET_INSTANCES";
 
 // Actions
-export const removeInstance = createAction(REMOVE_INSTANCE,
-    (payload) => payload, (payload, userId) => ({ userId }));
 export const setInstances = createAction(SET_INSTANCES,
-    (payload) => payload, (payload, userId) => ({ userId }));
+    (payload) => payload, (payload, realm, userId) => ({ realm, userId }));
 
 // Reducer
 const initialState = {};
 export default handleActions({
-    [REMOVE_INSTANCE]: (state, action) => {
-        const userServices = state[action.meta.userId];
-
-        return {
-            ...state,
-            [action.meta.userId]: without(userServices, find(userServices, { "_id": action.payload }))
-        };
-    },
     [SET_INSTANCES]: (state, action) => ({
         ...state,
-        [action.meta.userId]: action.payload
+        [action.meta.realm]: {
+            ...state[action.meta.realm],
+            [action.meta.userId]: action.payload
+        }
     })
 }, initialState);

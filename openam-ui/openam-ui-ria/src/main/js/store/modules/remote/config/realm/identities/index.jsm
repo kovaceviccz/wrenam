@@ -17,7 +17,9 @@
 import { combineReducers } from "redux";
 
 import groups from "./groups/index";
+import users from "./users/index";
 
 export default combineReducers({
-    groups
+    groups,
+    users
 });

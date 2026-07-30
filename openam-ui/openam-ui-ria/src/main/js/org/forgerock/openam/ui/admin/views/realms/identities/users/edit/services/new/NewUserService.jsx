@@ -12,6 +12,7 @@
  * information: "Portions copyright [year] [name of copyright owner]".
  *
  * Copyright 2018-2019 ForgeRock AS.
+ * Portions copyright 2026 Wren Security.
  */
 
 import { Form, Panel } from "react-bootstrap";
@@ -24,32 +25,50 @@ import FlatJSONSchemaView from "org/forgerock/openam/ui/common/views/jsonSchema/
 import JSONSchema from "org/forgerock/openam/ui/common/models/JSONSchema";
 import JSONValues from "org/forgerock/openam/ui/common/models/JSONValues";
 import Loading from "components/Loading";
+import Messages from "org/forgerock/commons/ui/common/components/Messages";
 import PageHeader from "components/PageHeader";
 import Router from "org/forgerock/commons/ui/common/main/Router";
 
 class NewUserService extends Component {
+    constructor (props) {
+        super(props);
+
+        this.state = {
+            isEditorReady: false
+        };
+    }
+
     componentDidUpdate () {
-        if (!this.jsonSchemaView && this.props.schema && this.props.template) {
+        if (!this.jsonSchemaView && this.props.schema && this.props.template && this.jsonForm) {
             this.jsonSchemaView = new FlatJSONSchemaView({
                 schema: new JSONSchema(this.props.schema),
-                values: new JSONValues(this.props.template)
+                values: new JSONValues(this.props.template),
+                onRendered: this.handleEditorRendered
             });
+            this.jsonForm.appendChild(this.jsonSchemaView.render().el);
+        }
+    }
 
-            if (this.jsonForm) {
-                this.jsonForm.appendChild(this.jsonSchemaView.render().el);
-            }
+    componentWillUnmount () {
+        if (this.jsonSchemaView) {
+            this.jsonSchemaView.destroy();
         }
     }
 
     handleCreate = () => {
+        if (!this.jsonSchemaView.isValid()) {
+            Messages.addMessage({ message: t("common.form.validation.errorsNotSaved"), type: Messages.TYPE_DANGER });
+            return;
+        }
         this.props.onCreate(this.jsonSchemaView.getData());
+    };
+
+    handleEditorRendered = () => {
+        this.setState({ isEditorReady: true });
     };
 
     setRef = (element) => {
         this.jsonForm = element;
-        if (this.jsonForm && this.jsonSchemaView) {
-            this.jsonForm.appendChild(this.jsonSchemaView.render().el);
-        }
     };
 
     render () {
@@ -76,6 +95,7 @@ class NewUserService extends Component {
                         <CreateFooter
                             backRoute={ Router.configuration.routes.realmsIdentitiesUsersEdit }
                             backRouteArgs={ [this.props.id] }
+                            disabled={ !this.state.isEditorReady }
                             onCreateClick={ this.handleCreate }
                         />
                     </Panel.Footer>
@@ -89,8 +109,11 @@ NewUserService.propTypes = {
     id: PropTypes.string.isRequired,
     isFetching: PropTypes.bool.isRequired,
     onCreate: PropTypes.func.isRequired,
-    schema: PropTypes.objectOf(PropTypes.object).isRequired,
-    template: PropTypes.objectOf(PropTypes.object).isRequired,
+    schema: PropTypes.shape({
+        properties: PropTypes.objectOf(PropTypes.object),
+        type: PropTypes.string
+    }),
+    template: PropTypes.objectOf(PropTypes.any),
     type: PropTypes.string.isRequired
 };
 

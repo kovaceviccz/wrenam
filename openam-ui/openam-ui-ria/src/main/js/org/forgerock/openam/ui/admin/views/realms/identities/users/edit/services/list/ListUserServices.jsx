@@ -12,6 +12,7 @@
  * information: "Portions copyright [year] [name of copyright owner]".
  *
  * Copyright 2018-2022 ForgeRock AS.
+ * Portions copyright 2026 Wren Security.
  */
 
 import { Panel } from "react-bootstrap";
@@ -53,6 +54,7 @@ const ListUserServices = (props) => {
                     } }
                     columns={ columns }
                     description={ t("console.identities.users.edit.services.list.callToAction.description") }
+                    keyField="_id"
                     title={ t("console.identities.users.edit.services.list.callToAction.title") }
                 />
             </Panel.Body>
@@ -62,6 +64,10 @@ const ListUserServices = (props) => {
 
 ListUserServices.propTypes = {
     creatables: PropTypes.arrayOf(PropTypes.object).isRequired,
+    isFetching: PropTypes.bool.isRequired,
+    items: PropTypes.arrayOf(PropTypes.object).isRequired,
+    onDelete: PropTypes.func.isRequired,
+    onRowClick: PropTypes.func.isRequired,
     realm: PropTypes.string.isRequired,
     userId: PropTypes.string.isRequired
 };

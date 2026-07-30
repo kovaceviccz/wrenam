@@ -12,6 +12,7 @@
  * information: "Portions copyright [year] [name of copyright owner]".
  *
  * Copyright 2018-2019 ForgeRock AS.
+ * Portions copyright 2026 Wren Security.
  */
 
 import { bindActionCreators } from "redux";
@@ -33,11 +34,16 @@ import withRouterPropType from "org/forgerock/commons/ui/common/components/hoc/w
 class NewUserServiceContainer extends Component {
     constructor () {
         super();
-        this.state = { isFetching: false };
+        this.state = {
+            isFetching: true,
+            type: ""
+        };
     }
 
     componentDidMount () {
         const [realm, userId, serviceId] = this.props.router.params;
+        this.props.setTemplate(null, serviceId);
+        this.props.setSchema(null, serviceId);
 
         Promise.all([
             getSchema(realm, serviceId, userId),
@@ -45,26 +51,41 @@ class NewUserServiceContainer extends Component {
             getAllTypes(realm, userId)
         ])
             .then(([schema, template, serviceTypes]) => {
+                if (this.isUnmounted) {
+                    return;
+                }
                 this.props.setTemplate(template, serviceId);
                 this.props.setSchema(schema, serviceId);
                 this.setState({
-                    type: result(find(serviceTypes, { "_id": serviceId }), "name"),
+                    type: result(find(serviceTypes.result, { "_id": serviceId }), "name", serviceId),
                     isFetching: false
                 });
             }, (response) => {
+                if (this.isUnmounted) {
+                    return;
+                }
                 this.setState({ isFetching: false });
                 Messages.addMessage({ response, type: Messages.TYPE_DANGER });
             });
+    }
+
+    componentWillUnmount () {
+        this.isUnmounted = true;
     }
 
     handleCreate = (formData) => {
         const [realm, userId, serviceId] = this.props.router.params;
 
         create(realm, userId, serviceId, formData).then(() => {
+            if (this.isUnmounted) {
+                return;
+            }
             Router.routeTo(Router.configuration.routes.realmsIdentitiesUsersServicesEdit,
                 { args: map([realm, userId, serviceId], encodeURIComponent), trigger: true });
         }, (response) => {
-            Messages.addMessage({ response, type: Messages.TYPE_DANGER });
+            if (!this.isUnmounted) {
+                Messages.addMessage({ response, type: Messages.TYPE_DANGER });
+            }
         });
     };
 
@@ -87,13 +108,12 @@ class NewUserServiceContainer extends Component {
 NewUserServiceContainer.propTypes = {
     router: withRouterPropType,
     schema: PropTypes.shape({
-        type: PropTypes.string.isRequired
+        properties: PropTypes.objectOf(PropTypes.object),
+        type: PropTypes.string
     }),
     setSchema: PropTypes.func.isRequired,
     setTemplate: PropTypes.func.isRequired,
-    template: PropTypes.shape({
-        type: PropTypes.string.isRequired
-    })
+    template: PropTypes.objectOf(PropTypes.any)
 };
 
 NewUserServiceContainer = connectWithStore(NewUserServiceContainer,
