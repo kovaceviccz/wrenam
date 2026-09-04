@@ -1,11 +1,18 @@
 /* global module, process */
 
-process.env.CHROME_BIN = require("puppeteer").executablePath();
+module.exports = async function (config) {
 
-module.exports = function (config) {
+    process.env.CHROME_BIN = await require("puppeteer").executablePath();
+
     config.set({
         basePath: ".",
-        frameworks: ["mocha", "requirejs"],
+        /*
+         * Order matters. Karma prepends each framework's files, so the framework listed
+         * last is loaded first. Mocha's UMD bundle registers itself as an anonymous AMD
+         * module whenever "define" is already present, which leaves "window.mocha" unset
+         * and breaks karma-mocha. Listing Mocha last makes it load before RequireJS.
+         */
+        frameworks: ["requirejs", "mocha"],
         files: [
             { pattern: "target/test/test-main.js" },
             { pattern: "target/test/**/*.js", included: false },
